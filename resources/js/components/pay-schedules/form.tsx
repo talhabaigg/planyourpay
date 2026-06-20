@@ -1,8 +1,8 @@
+import type { UseFormReturnType } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { UseFormReturnType } from '@inertiajs/react';
 
 export type PayScheduleFormData = {
     name: string;
@@ -27,7 +27,12 @@ const cadenceLabels: Record<string, string> = {
     monthly: 'Monthly',
 };
 
-export default function PayScheduleForm({ form, cadenceOptions, onSubmit, submitLabel }: Props) {
+export default function PayScheduleForm({
+    form,
+    cadenceOptions,
+    onSubmit,
+    submitLabel,
+}: Props) {
     return (
         <form
             className="space-y-4"
@@ -44,7 +49,11 @@ export default function PayScheduleForm({ form, cadenceOptions, onSubmit, submit
                     onChange={(e) => form.setData('name', e.target.value)}
                     placeholder="e.g. Primary salary"
                 />
-                {form.errors.name && <p className="text-sm text-destructive">{form.errors.name}</p>}
+                {form.errors.name && (
+                    <p className="text-sm text-destructive">
+                        {form.errors.name}
+                    </p>
+                )}
             </div>
 
             <div className="space-y-2">
@@ -57,7 +66,11 @@ export default function PayScheduleForm({ form, cadenceOptions, onSubmit, submit
                     onChange={(e) => form.setData('amount', e.target.value)}
                     placeholder="4000"
                 />
-                {form.errors.amount && <p className="text-sm text-destructive">{form.errors.amount}</p>}
+                {form.errors.amount && (
+                    <p className="text-sm text-destructive">
+                        {form.errors.amount}
+                    </p>
+                )}
             </div>
 
             <div className="space-y-2">
@@ -74,7 +87,11 @@ export default function PayScheduleForm({ form, cadenceOptions, onSubmit, submit
                         </option>
                     ))}
                 </select>
-                {form.errors.cadence && <p className="text-sm text-destructive">{form.errors.cadence}</p>}
+                {form.errors.cadence && (
+                    <p className="text-sm text-destructive">
+                        {form.errors.cadence}
+                    </p>
+                )}
             </div>
 
             <div className="space-y-2">
@@ -85,14 +102,20 @@ export default function PayScheduleForm({ form, cadenceOptions, onSubmit, submit
                     min={1}
                     value={form.data.recurrence_interval}
                     onChange={(e) =>
-                        form.setData('recurrence_interval', Number(e.target.value) || 1)
+                        form.setData(
+                            'recurrence_interval',
+                            Number(e.target.value) || 1,
+                        )
                     }
                 />
                 <p className="text-sm text-muted-foreground">
-                    Number of cadence cycles between pays (use 1 for every cycle).
+                    Number of cadence cycles between pays (use 1 for every
+                    cycle).
                 </p>
                 {form.errors.recurrence_interval && (
-                    <p className="text-sm text-destructive">{form.errors.recurrence_interval}</p>
+                    <p className="text-sm text-destructive">
+                        {form.errors.recurrence_interval}
+                    </p>
                 )}
             </div>
 
@@ -102,10 +125,14 @@ export default function PayScheduleForm({ form, cadenceOptions, onSubmit, submit
                     id="next_pay_date"
                     type="date"
                     value={form.data.next_pay_date}
-                    onChange={(e) => form.setData('next_pay_date', e.target.value)}
+                    onChange={(e) =>
+                        form.setData('next_pay_date', e.target.value)
+                    }
                 />
                 {form.errors.next_pay_date && (
-                    <p className="text-sm text-destructive">{form.errors.next_pay_date}</p>
+                    <p className="text-sm text-destructive">
+                        {form.errors.next_pay_date}
+                    </p>
                 )}
             </div>
 
@@ -113,9 +140,13 @@ export default function PayScheduleForm({ form, cadenceOptions, onSubmit, submit
                 <Checkbox
                     id="is_primary"
                     checked={form.data.is_primary}
-                    onCheckedChange={(checked) => form.setData('is_primary', Boolean(checked))}
+                    onCheckedChange={(checked) =>
+                        form.setData('is_primary', Boolean(checked))
+                    }
                 />
-                <Label htmlFor="is_primary">Treat as primary pay schedule</Label>
+                <Label htmlFor="is_primary">
+                    Treat as primary pay schedule
+                </Label>
             </div>
 
             <div className="space-y-2">

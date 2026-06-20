@@ -38,7 +38,8 @@ const cadenceLabels: Record<string, string> = {
 };
 
 export default function PaySchedulesIndex() {
-    const { schedules = [] } = usePage<{ schedules: PayScheduleSummary[] }>().props;
+    const { schedules = [] } = usePage<{ schedules: PayScheduleSummary[] }>()
+        .props;
 
     const currencyFormatter = useMemo(
         () =>
@@ -76,7 +77,8 @@ export default function PaySchedulesIndex() {
                 <div>
                     <h1 className="text-2xl font-semibold">Pay schedules</h1>
                     <p className="text-sm text-muted-foreground">
-                        Every plan starts here. Keep each income stream up to date.
+                        Every plan starts here. Keep each income stream up to
+                        date.
                     </p>
                 </div>
                 <Button asChild className="w-full sm:w-auto">
@@ -92,8 +94,8 @@ export default function PaySchedulesIndex() {
                     {schedules.length === 0 ? (
                         <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
                             <p className="text-sm text-muted-foreground">
-                                You don’t have any pay schedules yet. Create one to start
-                                planning periods.
+                                You don’t have any pay schedules yet. Create one
+                                to start planning periods.
                             </p>
                             <Button asChild variant="outline" size="sm">
                                 <Link href={paySchedulesCreate().url}>
@@ -125,12 +127,15 @@ export default function PaySchedulesIndex() {
                                         </div>
                                         <p className="truncate text-xs text-muted-foreground">
                                             {describeCadence(schedule)} · next{' '}
-                                            {schedule.upcoming_pay_date ?? schedule.next_pay_date}
+                                            {schedule.upcoming_pay_date ??
+                                                schedule.next_pay_date}
                                         </p>
                                     </div>
 
                                     <span className="shrink-0 text-sm font-semibold tabular-nums">
-                                        {currencyFormatter.format(Number(schedule.amount))}
+                                        {currencyFormatter.format(
+                                            Number(schedule.amount),
+                                        )}
                                     </span>
 
                                     <DropdownMenu>
@@ -149,7 +154,8 @@ export default function PaySchedulesIndex() {
                                                 <Link
                                                     href={
                                                         paySchedulesEdit({
-                                                            pay_schedule: schedule.id,
+                                                            pay_schedule:
+                                                                schedule.id,
                                                         }).url
                                                     }
                                                 >
@@ -159,7 +165,9 @@ export default function PaySchedulesIndex() {
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
-                                                onSelect={() => handleDelete(schedule)}
+                                                onSelect={() =>
+                                                    handleDelete(schedule)
+                                                }
                                                 className="text-destructive focus:text-destructive"
                                             >
                                                 <Trash2 className="h-4 w-4" />

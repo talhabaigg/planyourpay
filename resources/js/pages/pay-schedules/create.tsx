@@ -1,9 +1,15 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
-import PayScheduleForm, { PayScheduleFormData } from '@/components/pay-schedules/form';
-import { store as paySchedulesStore, index as paySchedulesIndex } from '@/routes/pay-schedules';
+import type { PayScheduleFormData } from '@/components/pay-schedules/form';
+import PayScheduleForm from '@/components/pay-schedules/form';
+import {
+    store as paySchedulesStore,
+    index as paySchedulesIndex,
+} from '@/routes/pay-schedules';
 
 export default function PaySchedulesCreate() {
-    const { cadenceOptions = ['weekly', 'fortnightly', 'monthly'] } = usePage<{ cadenceOptions: string[] }>().props;
+    const { cadenceOptions = ['weekly', 'fortnightly', 'monthly'] } = usePage<{
+        cadenceOptions: string[];
+    }>().props;
 
     const form = useForm<PayScheduleFormData>({
         name: '',

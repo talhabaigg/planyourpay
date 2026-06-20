@@ -8,7 +8,8 @@ import {
     Unplug,
     Wallet,
 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,21 +66,46 @@ const currency0 = new Intl.NumberFormat(undefined, {
 });
 
 function relativeTime(iso: string | null): string {
-    if (!iso) return '';
+    if (!iso) {
+        return '';
+    }
+
     const diff = Date.now() - new Date(iso).getTime();
-    if (Number.isNaN(diff)) return '';
+
+    if (Number.isNaN(diff)) {
+        return '';
+    }
+
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
+
+    if (mins < 1) {
+        return 'just now';
+    }
+
+    if (mins < 60) {
+        return `${mins}m ago`;
+    }
+
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
+
+    if (hrs < 24) {
+        return `${hrs}h ago`;
+    }
+
     return `${Math.floor(hrs / 24)}d ago`;
 }
 
 function fmtDate(d: Date | string | null): string {
-    if (!d) return '';
+    if (!d) {
+        return '';
+    }
+
     const date = typeof d === 'string' ? new Date(d) : d;
-    if (Number.isNaN(date.getTime())) return '';
+
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
     return date.toLocaleDateString(undefined, {
         day: 'numeric',
         month: 'short',
@@ -90,10 +116,18 @@ function fmtDate(d: Date | string | null): string {
 const DAY_MS = 86_400_000;
 
 /** Number of paydays on or before a date, counting from the next payday. */
-function paydaysUntil(targetDate: string, payDays: number, nextPayday: string): number {
+function paydaysUntil(
+    targetDate: string,
+    payDays: number,
+    nextPayday: string,
+): number {
     const np = new Date(nextPayday).getTime();
     const td = new Date(targetDate).getTime();
-    if (np > td) return 0;
+
+    if (np > td) {
+        return 0;
+    }
+
     return Math.floor((td - np) / (payDays * DAY_MS)) + 1;
 }
 
@@ -105,11 +139,22 @@ function recommendedPerPay(
     payDays: number | null,
     nextPayday: string | null,
 ): number | null {
-    if (!target || !targetDate || !payDays || !nextPayday) return null;
+    if (!target || !targetDate || !payDays || !nextPayday) {
+        return null;
+    }
+
     const remaining = target - balance;
-    if (remaining <= 0) return 0;
+
+    if (remaining <= 0) {
+        return 0;
+    }
+
     const count = paydaysUntil(targetDate, payDays, nextPayday);
-    if (count <= 0) return null;
+
+    if (count <= 0) {
+        return null;
+    }
+
     return Math.ceil(remaining / count);
 }
 
@@ -121,35 +166,68 @@ function forecastDate(
     payDays: number | null,
     nextPayday: string | null,
 ): Date | null {
-    if (!target || !contribution || contribution <= 0 || !payDays || !nextPayday)
+    if (
+        !target ||
+        !contribution ||
+        contribution <= 0 ||
+        !payDays ||
+        !nextPayday
+    ) {
         return null;
+    }
+
     const remaining = target - balance;
     const np = new Date(nextPayday);
-    if (remaining <= 0) return np;
+
+    if (remaining <= 0) {
+        return np;
+    }
+
     const k = Math.ceil(remaining / contribution);
     const d = new Date(np);
     d.setDate(d.getDate() + (k - 1) * payDays);
+
     return d;
 }
 
-function projection(s: Saver, payDays: number | null, nextPayday: string | null) {
+function projection(
+    s: Saver,
+    payDays: number | null,
+    nextPayday: string | null,
+) {
     const target = s.target ?? 0;
     const hasTarget = target > 0;
     const pct = hasTarget ? Math.min(100, (s.balance / target) * 100) : null;
 
     if (hasTarget && s.balance >= target) {
-        return { pct, label: 'Goal reached 🎉', status: null as 'ahead' | 'behind' | null };
+        return {
+            pct,
+            label: 'Goal reached 🎉',
+            status: null as 'ahead' | 'behind' | null,
+        };
     }
 
-    const fc = forecastDate(target, s.balance, s.contribution ?? 0, payDays, nextPayday);
+    const fc = forecastDate(
+        target,
+        s.balance,
+        s.contribution ?? 0,
+        payDays,
+        nextPayday,
+    );
+
     if (!fc) {
         return { pct, label: null, status: null as 'ahead' | 'behind' | null };
     }
 
     let status: 'ahead' | 'behind' | null = null;
+
     if (s.targetDate) {
-        status = fc.getTime() <= new Date(s.targetDate).getTime() ? 'ahead' : 'behind';
+        status =
+            fc.getTime() <= new Date(s.targetDate).getTime()
+                ? 'ahead'
+                : 'behind';
     }
+
     return { pct, label: `forecast ${fmtDate(fc)}`, status };
 }
 
@@ -171,9 +249,9 @@ function ConnectForm() {
             </CardHeader>
             <CardContent>
                 <p className="mb-4 text-sm text-muted-foreground">
-                    Paste a personal access token from Up to pull your Savers and
-                    balances. It’s stored encrypted and used for read-only access —
-                    PlanYourPay can’t move your money.
+                    Paste a personal access token from Up to pull your Savers
+                    and balances. It’s stored encrypted and used for read-only
+                    access — PlanYourPay can’t move your money.
                 </p>
                 <form onSubmit={submit} className="space-y-3">
                     <div className="space-y-1.5">
@@ -183,12 +261,18 @@ function ConnectForm() {
                             type="password"
                             autoComplete="off"
                             value={form.data.token}
-                            onChange={(e) => form.setData('token', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('token', e.target.value)
+                            }
                             placeholder="up:yeah:..."
                         />
                         <InputError message={form.errors.token} />
                     </div>
-                    <Button type="submit" disabled={form.processing} className="w-full sm:w-auto">
+                    <Button
+                        type="submit"
+                        disabled={form.processing}
+                        className="w-full sm:w-auto"
+                    >
                         Connect
                     </Button>
                 </form>
@@ -230,7 +314,11 @@ export default function SaversIndex({
     });
 
     const refresh = () =>
-        router.get('/savers', { refresh: 1 }, { preserveScroll: true, preserveState: false });
+        router.get(
+            '/savers',
+            { refresh: 1 },
+            { preserveScroll: true, preserveState: false },
+        );
 
     const disconnect = () => {
         if (window.confirm('Disconnect your Up account?')) {
@@ -257,7 +345,11 @@ export default function SaversIndex({
 
     const submitPlan = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!planSaver) return;
+
+        if (!planSaver) {
+            return;
+        }
+
         planForm.post(`/savers/${planSaver.id}/plan`, {
             preserveScroll: true,
             onSuccess: closePlan,
@@ -296,7 +388,8 @@ export default function SaversIndex({
                 <div>
                     <h1 className="text-2xl font-semibold">Savers</h1>
                     <p className="text-sm text-muted-foreground">
-                        Your Up Savers — set a goal and a per-pay transfer to project ahead.
+                        Your Up Savers — set a goal and a per-pay transfer to
+                        project ahead.
                     </p>
                 </div>
                 {connected && (
@@ -346,7 +439,9 @@ export default function SaversIndex({
                 <>
                     <Card className="overflow-hidden">
                         <CardContent className="p-5">
-                            <p className="text-sm text-muted-foreground">Total in Savers</p>
+                            <p className="text-sm text-muted-foreground">
+                                Total in Savers
+                            </p>
                             <p className="text-4xl font-semibold tracking-tight text-emerald-500">
                                 {currency.format(total)}
                             </p>
@@ -367,7 +462,8 @@ export default function SaversIndex({
                     <Card className="gap-0 overflow-hidden py-0">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3">
                             <CardTitle className="text-base">
-                                {savers.length} Saver{savers.length === 1 ? '' : 's'}
+                                {savers.length} Saver
+                                {savers.length === 1 ? '' : 's'}
                             </CardTitle>
                             <button
                                 type="button"
@@ -375,7 +471,9 @@ export default function SaversIndex({
                                 className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
                             >
                                 <RotateCcw className="h-3 w-3" />
-                                {syncedAt ? `Updated ${relativeTime(syncedAt)}` : 'Refresh'}
+                                {syncedAt
+                                    ? `Updated ${relativeTime(syncedAt)}`
+                                    : 'Refresh'}
                             </button>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -383,20 +481,23 @@ export default function SaversIndex({
                                 <ul className="divide-y divide-border border-t">
                                     {savers.map((s) => {
                                         const zero = s.balance === 0;
-                                        const hasPlan = !!s.target || !!s.contribution;
-                                        const { pct, label, status } = projection(
-                                            s,
-                                            payDays,
-                                            nextPayday,
-                                        );
+                                        const hasPlan =
+                                            !!s.target || !!s.contribution;
+                                        const { pct, label, status } =
+                                            projection(s, payDays, nextPayday);
 
                                         return (
-                                            <li key={s.id} className="px-4 py-2.5">
+                                            <li
+                                                key={s.id}
+                                                className="px-4 py-2.5"
+                                            >
                                                 <div className="flex items-center gap-3">
                                                     <span
                                                         className={cn(
                                                             'min-w-0 flex-1 truncate font-medium',
-                                                            zero && !hasPlan && 'text-muted-foreground',
+                                                            zero &&
+                                                                !hasPlan &&
+                                                                'text-muted-foreground',
                                                         )}
                                                     >
                                                         {s.name}
@@ -404,20 +505,27 @@ export default function SaversIndex({
                                                     <span
                                                         className={cn(
                                                             'shrink-0 font-semibold tabular-nums',
-                                                            zero && !hasPlan && 'font-normal text-muted-foreground',
+                                                            zero &&
+                                                                !hasPlan &&
+                                                                'font-normal text-muted-foreground',
                                                         )}
                                                     >
-                                                        {currency.format(s.balance)}
+                                                        {currency.format(
+                                                            s.balance,
+                                                        )}
                                                     </span>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         className={cn(
                                                             'h-8 w-8 shrink-0',
-                                                            hasPlan && 'text-primary',
+                                                            hasPlan &&
+                                                                'text-primary',
                                                         )}
                                                         aria-label={`Plan ${s.name}`}
-                                                        onClick={() => openPlan(s)}
+                                                        onClick={() =>
+                                                            openPlan(s)
+                                                        }
                                                     >
                                                         <Target className="h-4 w-4" />
                                                     </Button>
@@ -430,30 +538,48 @@ export default function SaversIndex({
                                                                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                                                                     <div
                                                                         className="h-full rounded-full bg-primary"
-                                                                        style={{ width: `${pct}%` }}
+                                                                        style={{
+                                                                            width: `${pct}%`,
+                                                                        }}
                                                                     />
                                                                 </div>
                                                                 <div className="flex justify-between text-xs text-muted-foreground">
                                                                     <span>
-                                                                        {currency0.format(s.balance)} of{' '}
-                                                                        {currency0.format(s.target as number)}
+                                                                        {currency0.format(
+                                                                            s.balance,
+                                                                        )}{' '}
+                                                                        of{' '}
+                                                                        {currency0.format(
+                                                                            s.target as number,
+                                                                        )}
                                                                     </span>
-                                                                    <span>{Math.round(pct)}%</span>
+                                                                    <span>
+                                                                        {Math.round(
+                                                                            pct,
+                                                                        )}
+                                                                        %
+                                                                    </span>
                                                                 </div>
                                                             </>
                                                         )}
-                                                        {(s.contribution || label) && (
+                                                        {(s.contribution ||
+                                                            label) && (
                                                             <p className="text-xs text-muted-foreground">
                                                                 {s.contribution
                                                                     ? `+${currency0.format(s.contribution)}/pay`
                                                                     : ''}
-                                                                {s.contribution && label ? ' · ' : ''}
+                                                                {s.contribution &&
+                                                                label
+                                                                    ? ' · '
+                                                                    : ''}
                                                                 {label && (
                                                                     <span
                                                                         className={cn(
-                                                                            status === 'behind' &&
+                                                                            status ===
+                                                                                'behind' &&
                                                                                 'text-amber-600 dark:text-amber-500',
-                                                                            status === 'ahead' &&
+                                                                            status ===
+                                                                                'ahead' &&
                                                                                 'text-emerald-600 dark:text-emerald-500',
                                                                         )}
                                                                     >
@@ -461,7 +587,13 @@ export default function SaversIndex({
                                                                     </span>
                                                                 )}
                                                                 {s.targetDate && (
-                                                                    <span> · goal {fmtDate(s.targetDate)}</span>
+                                                                    <span>
+                                                                        {' '}
+                                                                        · goal{' '}
+                                                                        {fmtDate(
+                                                                            s.targetDate,
+                                                                        )}
+                                                                    </span>
                                                                 )}
                                                             </p>
                                                         )}
@@ -481,12 +613,16 @@ export default function SaversIndex({
                 </>
             )}
 
-            <Dialog open={planSaver !== null} onOpenChange={(o) => (o ? null : closePlan())}>
+            <Dialog
+                open={planSaver !== null}
+                onOpenChange={(o) => (o ? null : closePlan())}
+            >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>{planSaver?.name}</DialogTitle>
                         <DialogDescription>
-                            Set a goal and a per-pay transfer to project this Saver forward.
+                            Set a goal and a per-pay transfer to project this
+                            Saver forward.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -501,11 +637,16 @@ export default function SaversIndex({
                                     step="0.01"
                                     value={planForm.data.target_amount}
                                     onChange={(e) =>
-                                        planForm.setData('target_amount', e.target.value)
+                                        planForm.setData(
+                                            'target_amount',
+                                            e.target.value,
+                                        )
                                     }
                                     placeholder="5000"
                                 />
-                                <InputError message={planForm.errors.target_amount} />
+                                <InputError
+                                    message={planForm.errors.target_amount}
+                                />
                             </div>
                             <div className="space-y-1.5">
                                 <Label htmlFor="plan-date">Target date</Label>
@@ -514,10 +655,15 @@ export default function SaversIndex({
                                     type="date"
                                     value={planForm.data.target_date}
                                     onChange={(e) =>
-                                        planForm.setData('target_date', e.target.value)
+                                        planForm.setData(
+                                            'target_date',
+                                            e.target.value,
+                                        )
                                     }
                                 />
-                                <InputError message={planForm.errors.target_date} />
+                                <InputError
+                                    message={planForm.errors.target_date}
+                                />
                             </div>
                         </div>
 
@@ -546,7 +692,9 @@ export default function SaversIndex({
                         )}
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="plan-contribution">Transfer each pay</Label>
+                            <Label htmlFor="plan-contribution">
+                                Transfer each pay
+                            </Label>
                             <Input
                                 id="plan-contribution"
                                 type="number"
@@ -554,11 +702,18 @@ export default function SaversIndex({
                                 step="0.01"
                                 value={planForm.data.contribution_amount}
                                 onChange={(e) =>
-                                    planForm.setData('contribution_amount', e.target.value)
+                                    planForm.setData(
+                                        'contribution_amount',
+                                        e.target.value,
+                                    )
                                 }
-                                placeholder={recommended ? String(recommended) : '200'}
+                                placeholder={
+                                    recommended ? String(recommended) : '200'
+                                }
                             />
-                            <InputError message={planForm.errors.contribution_amount} />
+                            <InputError
+                                message={planForm.errors.contribution_amount}
+                            />
                             {planForecast && (
                                 <p
                                     className={cn(
@@ -568,7 +723,8 @@ export default function SaversIndex({
                                             : 'text-muted-foreground',
                                     )}
                                 >
-                                    Forecast: complete by {fmtDate(planForecast)}
+                                    Forecast: complete by{' '}
+                                    {fmtDate(planForecast)}
                                     {forecastBehind && planTargetDate
                                         ? ' — later than target'
                                         : ''}
@@ -577,10 +733,17 @@ export default function SaversIndex({
                         </div>
 
                         <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={closePlan}>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={closePlan}
+                            >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={planForm.processing}>
+                            <Button
+                                type="submit"
+                                disabled={planForm.processing}
+                            >
                                 Save plan
                             </Button>
                         </DialogFooter>

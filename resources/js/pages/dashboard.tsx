@@ -1,5 +1,12 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowUpRight, CalendarClock, CheckCircle2, ListChecks, PiggyBank, Wallet } from 'lucide-react';
+import {
+    ArrowUpRight,
+    CalendarClock,
+    CheckCircle2,
+    ListChecks,
+    PiggyBank,
+    Wallet,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { dashboard } from '@/routes';
@@ -14,9 +21,16 @@ const currency = new Intl.NumberFormat(undefined, {
 });
 
 function formatDue(iso: string | null): string {
-    if (!iso) return '';
+    if (!iso) {
+        return '';
+    }
+
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
+
+    if (Number.isNaN(d.getTime())) {
+        return '';
+    }
+
     return d.toLocaleDateString(undefined, {
         weekday: 'short',
         day: 'numeric',
@@ -72,7 +86,8 @@ export default function Dashboard() {
                                 </p>
                                 <p className="mt-1 text-sm text-muted-foreground">
                                     Add a pay schedule and your recurring
-                                    commitments to see every pay cycle at a glance.
+                                    commitments to see every pay cycle at a
+                                    glance.
                                 </p>
                             </div>
                             <div className="mt-2 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -118,7 +133,8 @@ export default function Dashboard() {
                             </span>
                             {payPeriodStart && payPeriodEnd && (
                                 <span>
-                                    {formatDue(payPeriodStart)} – {formatDue(payPeriodEnd)}
+                                    {formatDue(payPeriodStart)} –{' '}
+                                    {formatDue(payPeriodEnd)}
                                 </span>
                             )}
                         </div>
@@ -175,7 +191,9 @@ export default function Dashboard() {
                         <CardContent className="flex flex-col gap-1 p-4">
                             <Wallet className="h-5 w-5 text-muted-foreground" />
                             <span className="mt-1 text-2xl font-semibold">
-                                {income !== null ? currency.format(income) : '—'}
+                                {income !== null
+                                    ? currency.format(income)
+                                    : '—'}
                             </span>
                             <span className="text-xs text-muted-foreground">
                                 Income per pay
@@ -223,7 +241,10 @@ export default function Dashboard() {
                                                 {item.name}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                {[formatDue(item.due), item.category]
+                                                {[
+                                                    formatDue(item.due),
+                                                    item.category,
+                                                ]
                                                     .filter(Boolean)
                                                     .join(' · ')}
                                             </p>

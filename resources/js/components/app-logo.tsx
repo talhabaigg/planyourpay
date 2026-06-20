@@ -7,8 +7,10 @@ export default function AppLogo() {
                 <AppLogoIcon className="h-5 w-5" />
             </div>
             <div className="leading-tight">
-                <p className="text-sm font-semibold text-[var(--foreground)]">PlanYourPay</p>
-                <p className="text-xs text-[color-mix(in srgb, var(--foreground) 60%, transparent)]">
+                <p className="text-sm font-semibold text-[var(--foreground)]">
+                    PlanYourPay
+                </p>
+                <p className="text-[color-mix(in srgb, var(--foreground) 60%, transparent)] text-xs">
                     Assign every pay in advance
                 </p>
             </div>

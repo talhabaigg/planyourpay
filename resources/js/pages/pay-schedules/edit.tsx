@@ -1,6 +1,10 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
-import PayScheduleForm, { PayScheduleFormData } from '@/components/pay-schedules/form';
-import { update as paySchedulesUpdate, index as paySchedulesIndex } from '@/routes/pay-schedules';
+import type { PayScheduleFormData } from '@/components/pay-schedules/form';
+import PayScheduleForm from '@/components/pay-schedules/form';
+import {
+    update as paySchedulesUpdate,
+    index as paySchedulesIndex,
+} from '@/routes/pay-schedules';
 
 interface PayScheduleResource {
     id: number;
@@ -14,7 +18,9 @@ interface PayScheduleResource {
 }
 
 export default function PaySchedulesEdit() {
-    const { schedule, cadenceOptions = ['weekly', 'fortnightly', 'monthly'] } = usePage<{ schedule: PayScheduleResource; cadenceOptions: string[] }>().props;
+    const { schedule, cadenceOptions = ['weekly', 'fortnightly', 'monthly'] } =
+        usePage<{ schedule: PayScheduleResource; cadenceOptions: string[] }>()
+            .props;
 
     const form = useForm<PayScheduleFormData>({
         name: schedule.name,
@@ -41,9 +47,12 @@ export default function PaySchedulesEdit() {
                 cadenceOptions={cadenceOptions}
                 submitLabel="Save changes"
                 onSubmit={() =>
-                    form.put(paySchedulesUpdate({ pay_schedule: schedule.id }).url, {
-                        preserveScroll: true,
-                    })
+                    form.put(
+                        paySchedulesUpdate({ pay_schedule: schedule.id }).url,
+                        {
+                            preserveScroll: true,
+                        },
+                    )
                 }
             />
         </div>
