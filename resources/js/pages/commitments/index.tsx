@@ -304,7 +304,11 @@ export default function CommitmentsIndex() {
                             </div>
                         </div>
                         <div className="flex justify-end">
-                            <Button type="submit" disabled={createForm.processing}>
+                            <Button
+                                type="submit"
+                                disabled={createForm.processing}
+                                className="w-full sm:w-auto"
+                            >
                                 Save commitment
                             </Button>
                         </div>
@@ -505,11 +509,4 @@ export default function CommitmentsIndex() {
     );
 }
 
-CommitmentsIndex.layout = {
-    breadcrumbs: [
-        {
-            title: 'Commitments',
-            href: commitmentsIndex().url,
-        } as BreadcrumbItem,
-    ],
-};
+CommitmentsIndex.l

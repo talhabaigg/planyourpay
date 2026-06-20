@@ -40,14 +40,14 @@ export default function PaySchedulesIndex() {
         <div className="space-y-6 p-4">
             <Head title="Pay schedules" />
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-semibold">Pay schedules</h1>
                     <p className="text-sm text-muted-foreground">
                         Every plan starts here. Keep each income stream up to date.
                     </p>
                 </div>
-                <Button asChild>
+                <Button asChild className="w-full sm:w-auto">
                     <Link href={paySchedulesCreate().url}>Add schedule</Link>
                 </Button>
             </div>
@@ -121,7 +121,4 @@ PaySchedulesIndex.layout = {
     breadcrumbs: [
         {
             title: 'Pay schedules',
-            href: paySchedulesIndex().url,
-        } as BreadcrumbItem,
-    ],
-};
+            href: paySc
