@@ -52,16 +52,19 @@ class User extends Authenticatable implements PasskeyUser
         ];
     }
 
+    /** @return HasMany<PaySchedule, $this> */
     public function paySchedules(): HasMany
     {
         return $this->hasMany(PaySchedule::class);
     }
 
+    /** @return HasMany<Commitment, $this> */
     public function commitments(): HasMany
     {
         return $this->hasMany(Commitment::class);
     }
 
+    /** @return HasMany<PayPlan, $this> */
     public function payPlans(): HasMany
     {
         return $this->hasMany(PayPlan::class);

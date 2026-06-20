@@ -179,7 +179,6 @@ class SaverController extends Controller
             'weekly' => 7,
             'fortnightly' => 14,
             'monthly' => 30,
-            default => 14,
         };
 
         return $base * max(1, (int) $primary->recurrence_interval);
@@ -208,7 +207,6 @@ class SaverController extends Controller
                 'weekly' => $date->addWeeks($interval),
                 'fortnightly' => $date->addWeeks(2 * $interval),
                 'monthly' => $date->addMonths($interval),
-                default => $date->addWeeks($interval),
             };
         }
 

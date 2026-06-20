@@ -99,10 +99,6 @@ class DashboardController extends Controller
      */
     protected function occurrenceInWindow(Commitment $commitment, Carbon $start, Carbon $end): ?Carbon
     {
-        if (! $commitment->first_due_date) {
-            return null;
-        }
-
         $date = Carbon::parse($commitment->first_due_date)->startOfDay();
         $interval = max(1, (int) $commitment->recurrence_interval);
 
@@ -117,7 +113,6 @@ class DashboardController extends Controller
                 'monthly' => $date->addMonths($interval),
                 'quarterly' => $date->addMonths(3 * $interval),
                 'annual' => $date->addYears($interval),
-                default => $date->addMonths($interval),
             };
         }
 
@@ -130,10 +125,6 @@ class DashboardController extends Controller
      */
     protected function nextCommitmentDue(Commitment $commitment, Carbon $today): ?Carbon
     {
-        if (! $commitment->first_due_date) {
-            return null;
-        }
-
         $date = Carbon::parse($commitment->first_due_date)->startOfDay();
         $interval = max(1, (int) $commitment->recurrence_interval);
 
@@ -148,7 +139,6 @@ class DashboardController extends Controller
                 'monthly' => $date->addMonths($interval),
                 'quarterly' => $date->addMonths(3 * $interval),
                 'annual' => $date->addYears($interval),
-                default => $date->addMonths($interval),
             };
         }
 
@@ -158,10 +148,12 @@ class DashboardController extends Controller
     /**
      * Resolve the pay period the user is currently in: the most recent pay
      * date on or before today (start) and the following pay date (end).
+     *
+     * @return array{start: string|null, end: string|null}
      */
     protected function currentPayPeriod(?PaySchedule $schedule): array
     {
-        if (! $schedule || ! $schedule->next_pay_date) {
+        if (! $schedule) {
             return ['start' => null, 'end' => null];
         }
 
@@ -171,7 +163,6 @@ class DashboardController extends Controller
             'weekly' => $d->copy()->addWeeks($interval),
             'fortnightly' => $d->copy()->addWeeks(2 * $interval),
             'monthly' => $d->copy()->addMonths($interval),
-            default => $d->copy()->addWeeks($interval),
         };
 
         $start = Carbon::parse($schedule->next_pay_date)->startOfDay();

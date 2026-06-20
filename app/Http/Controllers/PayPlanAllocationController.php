@@ -42,7 +42,7 @@ class PayPlanAllocationController extends Controller
         ];
 
         if (Schema::hasColumn('pay_plan_allocations', 'date')) {
-            $attributes['date'] = $payPlan->period_start_date?->toDateString();
+            $attributes['date'] = $payPlan->period_start_date->toDateString();
         }
 
         PayPlanAllocation::updateOrCreate(

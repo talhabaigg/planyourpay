@@ -89,7 +89,9 @@ class UpBankService
 
         $response->throw();
 
-        return collect($response->json('data', []))
+        $data = $response->json('data', []);
+
+        return collect(is_array($data) ? $data : [])
             ->map(fn (array $account) => [
                 'id' => $account['id'],
                 'name' => $account['attributes']['displayName'] ?? 'Saver',
@@ -112,7 +114,9 @@ class UpBankService
 
         $response->throw();
 
-        return collect($response->json('data', []))
+        $data = $response->json('data', []);
+
+        return collect(is_array($data) ? $data : [])
             ->sum(fn (array $a) => (float) ($a['attributes']['balance']['value'] ?? 0));
     }
 }

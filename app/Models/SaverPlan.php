@@ -22,6 +22,7 @@ class SaverPlan extends Model
         'contribution_amount' => 'decimal:2',
     ];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

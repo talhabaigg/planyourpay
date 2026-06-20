@@ -12,6 +12,7 @@ use Inertia\Response;
 
 class PayScheduleController extends Controller
 {
+    /** @var list<string> */
     protected array $cadenceOptions = ['weekly', 'fortnightly', 'monthly'];
 
     public function index(): Response
@@ -70,6 +71,9 @@ class PayScheduleController extends Controller
         return redirect()->route('pay-schedules.index')->with('success', 'Pay schedule removed.');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function present(PaySchedule $schedule): array
     {
         return [
@@ -87,12 +91,8 @@ class PayScheduleController extends Controller
         ];
     }
 
-    protected function upcomingPayDate(PaySchedule $schedule): ?string
+    protected function upcomingPayDate(PaySchedule $schedule): string
     {
-        if (! $schedule->next_pay_date) {
-            return null;
-        }
-
         $date = Carbon::parse($schedule->next_pay_date)->startOfDay();
         $today = Carbon::today();
         $interval = max(1, (int) $schedule->recurrence_interval);
@@ -102,13 +102,15 @@ class PayScheduleController extends Controller
                 'weekly' => $date->addWeeks($interval),
                 'fortnightly' => $date->addWeeks(2 * $interval),
                 'monthly' => $date->addMonths($interval),
-                default => $date->addWeeks($interval),
             };
         }
 
         return $date->toDateString();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function validateData(Request $request, ?int $payScheduleId = null): array
     {
         $data = $request->validate([

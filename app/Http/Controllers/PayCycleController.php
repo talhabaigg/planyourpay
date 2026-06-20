@@ -86,7 +86,7 @@ class PayCycleController extends Controller
         // Saver transfers are computed each load (not seeded), except plans
         // already materialised (an actual amount recorded) in this cycle.
         $materialised = $hasSaver
-            ? $persisted->pluck('saver_plan_id')->filter()->all()
+            ? $persisted->pluck('saver_plan_id')->filter()->map(fn ($id) => (int) $id)->values()->all()
             : [];
         $saverTransfers = $this->saverTransfers($request->user(), $start, $materialised);
         $allocations = $allocations->concat($saverTransfers);
@@ -112,6 +112,9 @@ class PayCycleController extends Controller
 
     /**
      * Active Saver transfers as computed outflow lines for a pay cycle.
+     *
+     * @param  array<int, int>  $exclude
+     * @return Collection<int, array<string, mixed>>
      */
     protected function saverTransfers(User $user, Carbon $start, array $exclude = []): Collection
     {
@@ -131,30 +134,44 @@ class PayCycleController extends Controller
         $names = $this->saverNames($user);
 
         return $plans
-            ->map(fn (SaverPlan $p) => [
-                'id' => 'saver-'.$p->id,
-                'type' => 'outflow',
-                'label' => '→ '.($names[$p->up_account_id] ?? ($p->name ?: 'Saver')),
-                'amount' => (float) $p->contribution_amount,
-                'date' => $start->toDateString(),
-                'status' => 'planned',
-                'is_recurring' => true,
-                'is_saver_transfer' => true,
-                'materialized' => false,
-                'saverPlanId' => $p->id,
-            ])
+            ->map(fn (SaverPlan $p) => $this->saverTransferRow($p, $start, $names))
             ->values();
     }
 
     /**
+     * Build a single computed Saver transfer line.
+     *
+     * @param  Collection<array-key, mixed>  $names
+     * @return array<string, mixed>
+     */
+    protected function saverTransferRow(SaverPlan $p, Carbon $start, Collection $names): array
+    {
+        return [
+            'id' => 'saver-'.$p->id,
+            'type' => 'outflow',
+            'label' => '→ '.($names[$p->up_account_id] ?? ($p->name ?: 'Saver')),
+            'amount' => (float) $p->contribution_amount,
+            'date' => $start->toDateString(),
+            'status' => 'planned',
+            'is_recurring' => true,
+            'is_saver_transfer' => true,
+            'materialized' => false,
+            'saverPlanId' => $p->id,
+        ];
+    }
+
+    /**
      * Map of Up account id => Saver name, fetched from Up and cached briefly.
+     *
+     * @return Collection<array-key, mixed>
      */
     protected function saverNames(User $user): Collection
     {
         // Prefer the Savers page cache if it's warm (avoids an extra Up call).
         $cached = Cache::get('up.savers.v2.'.$user->id);
-        if (isset($cached['savers'])) {
-            return collect($cached['savers'])->pluck('name', 'id');
+        $savers = is_array($cached) ? ($cached['savers'] ?? null) : null;
+        if (is_array($savers)) {
+            return collect($savers)->pluck('name', 'id');
         }
 
         $up = UpBankService::forUser($user);
@@ -261,6 +278,8 @@ class PayCycleController extends Controller
 
     /**
      * The current period followed by the next ($count - 1) periods.
+     *
+     * @return list<array{0: Carbon, 1: Carbon}>
      */
     protected function upcomingPeriods(PaySchedule $schedule, int $count): array
     {
@@ -280,6 +299,8 @@ class PayCycleController extends Controller
     /**
      * Current pay period: the most recent pay date on or before today and the
      * following pay date.
+     *
+     * @return array{0: Carbon, 1: Carbon}
      */
     protected function currentPeriod(PaySchedule $schedule): array
     {
@@ -306,16 +327,11 @@ class PayCycleController extends Controller
             'weekly' => $d->copy()->addWeeks($interval),
             'fortnightly' => $d->copy()->addWeeks(2 * $interval),
             'monthly' => $d->copy()->addMonths($interval),
-            default => $d->copy()->addWeeks($interval),
         };
     }
 
     protected function occurrenceInWindow(Commitment $commitment, Carbon $start, Carbon $end): ?Carbon
     {
-        if (! $commitment->first_due_date) {
-            return null;
-        }
-
         $date = Carbon::parse($commitment->first_due_date)->startOfDay();
         $interval = max(1, (int) $commitment->recurrence_interval);
 
@@ -330,7 +346,6 @@ class PayCycleController extends Controller
                 'monthly' => $date->addMonths($interval),
                 'quarterly' => $date->addMonths(3 * $interval),
                 'annual' => $date->addYears($interval),
-                default => $date->addMonths($interval),
             };
         }
 

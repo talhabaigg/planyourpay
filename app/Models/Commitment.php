@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use Database\Factories\CommitmentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class Commitment extends Model
 {
+    /** @use HasFactory<CommitmentFactory> */
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -45,12 +49,14 @@ class Commitment extends Model
         });
     }
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function allocations()
+    /** @return HasMany<PayPlanAllocation, $this> */
+    public function allocations(): HasMany
     {
         return $this->hasMany(PayPlanAllocation::class);
     }

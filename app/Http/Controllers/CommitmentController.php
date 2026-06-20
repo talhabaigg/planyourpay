@@ -65,6 +65,9 @@ class CommitmentController extends Controller
             ->with('success', 'Commitment removed');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function validateCommitment(Request $request): array
     {
         $data = $request->validate([
