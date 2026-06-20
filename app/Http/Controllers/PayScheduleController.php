@@ -78,10 +78,35 @@ class PayScheduleController extends Controller
             'amount' => $schedule->amount,
             'cadence' => $schedule->cadence,
             'recurrence_interval' => $schedule->recurrence_interval,
+            // Raw anchor (used to pre-fill the edit form).
             'next_pay_date' => optional($schedule->next_pay_date)->toDateString(),
+            // Anchor rolled forward to the next pay date on or after today.
+            'upcoming_pay_date' => $this->upcomingPayDate($schedule),
             'is_primary' => $schedule->is_primary,
             'notes' => $schedule->notes,
         ];
+    }
+
+    protected function upcomingPayDate(PaySchedule $schedule): ?string
+    {
+        if (! $schedule->next_pay_date) {
+            return null;
+        }
+
+        $date = Carbon::parse($schedule->next_pay_date)->startOfDay();
+        $today = Carbon::today();
+        $interval = max(1, (int) $schedule->recurrence_interval);
+
+        for ($i = 0; $i < 520 && $date->lt($today); $i++) {
+            $date = match ($schedule->cadence) {
+                'weekly' => $date->addWeeks($interval),
+                'fortnightly' => $date->addWeeks(2 * $interval),
+                'monthly' => $date->addMonths($interval),
+                default => $date->addWeeks($interval),
+            };
+        }
+
+        return $date->toDateString();
     }
 
     protected function validateData(Request $request, ?int $payScheduleId = null): array
@@ -95,33 +120,3 @@ class PayScheduleController extends Controller
             'is_primary' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
         ]);
-
-        $data['recurrence_interval'] = $data['recurrence_interval'] ?? 1;
-        $data['day_of_week'] = Carbon::parse($data['next_pay_date'])->dayOfWeek;
-        $data['day_of_month'] = Carbon::parse($data['next_pay_date'])->day;
-        $data['is_primary'] = (bool) ($data['is_primary'] ?? false);
-
-        return Arr::only($data, [
-            'name',
-            'amount',
-            'cadence',
-            'recurrence_interval',
-            'next_pay_date',
-            'day_of_week',
-            'day_of_month',
-            'notes',
-            'is_primary',
-        ]);
-    }
-
-    protected function handlePrimaryFlag(int $userId, bool $isPrimary, ?int $ignoreId = null): void
-    {
-        if ($isPrimary) {
-            $query = PaySchedule::where('user_id', $userId);
-            if ($ignoreId) {
-                $query->where('id', '<>', $ignoreId);
-            }
-            $query->update(['is_primary' => false]);
-        }
-    }
-}

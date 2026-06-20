@@ -16,12 +16,14 @@ class PayPlanAllocation extends Model
         'type',
         'label',
         'amount',
+        'date',
         'status',
         'notes',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'date' => 'date',
     ];
 
     public function plan()
@@ -31,6 +33,4 @@ class PayPlanAllocation extends Model
 
     public function commitment()
     {
-        return $this->belongsTo(Commitment::class);
-    }
-}
+        return $th

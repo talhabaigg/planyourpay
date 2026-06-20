@@ -1,10 +1,26 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useMemo, useState, type FormEvent } from 'react';
+import { MoreVertical, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -83,10 +99,10 @@ const serializeCommitment = (
 
 export default function CommitmentsIndex() {
     const { commitments = [] } = usePage<{ commitments: CommitmentSummary[] }>().props;
+    const [dialogOpen, setDialogOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
-    const createForm = useForm<CommitmentFormData>({ ...emptyForm });
-    const editForm = useForm<CommitmentFormData>({ ...emptyForm });
+    const form = useForm<CommitmentFormData>({ ...emptyForm });
 
     const currencyFormatter = useMemo(
         () =>
@@ -103,53 +119,61 @@ export default function CommitmentsIndex() {
             return 'Single payment';
         }
 
-        if (commitment.recurrence_interval <= 1) {
-            return recurrenceOptions.find((option) => option.value === commitment.recurrence_type)?.label ?? commitment.recurrence_type;
-        }
-
         const baseLabel =
-            recurrenceOptions.find((option) => option.value === commitment.recurrence_type)?.label ?? commitment.recurrence_type;
+            recurrenceOptions.find((option) => option.value === commitment.recurrence_type)?.label ??
+            commitment.recurrence_type;
+
+        if (commitment.recurrence_interval <= 1) {
+            return baseLabel;
+        }
 
         return `${baseLabel} · every ${commitment.recurrence_interval}`;
     };
 
-    const handleCreate = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        createForm.post(commitmentsStore().url, {
-            preserveScroll: true,
-            onSuccess: () => createForm.reset(),
-        });
-    };
-
-    const startEditing = (commitment: CommitmentSummary) => {
-        setEditingId(commitment.id);
-        editForm.setData(serializeCommitment(commitment));
-    };
-
-    const cancelEditing = () => {
+    const closeDialog = () => {
+        setDialogOpen(false);
         setEditingId(null);
-        editForm.reset();
+        form.reset();
+        form.clearErrors();
     };
 
-    const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!editingId) return;
+    const openCreate = () => {
+        setEditingId(null);
+        form.setData({ ...emptyForm });
+        form.clearErrors();
+        setDialogOpen(true);
+    };
 
-        editForm.put(commitmentsUpdate({ commitment: editingId }).url, {
+    const openEdit = (commitment: CommitmentSummary) => {
+        setEditingId(commitment.id);
+        form.setData(serializeCommitment(commitment));
+        form.clearErrors();
+        setDialogOpen(true);
+    };
+
+    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (editingId) {
+            form.put(commitmentsUpdate({ commitment: editingId }).url, {
+                preserveScroll: true,
+                onSuccess: closeDialog,
+            });
+            return;
+        }
+
+        form.post(commitmentsStore().url, {
             preserveScroll: true,
-            onSuccess: () => {
-                setEditingId(null);
-                editForm.reset();
-            },
+            onSuccess: closeDialog,
         });
     };
 
     const handleToggle = (commitment: CommitmentSummary) => {
-        const payload = serializeCommitment(commitment, { active: !commitment.active });
-
-        router.put(commitmentsUpdate({ commitment: commitment.id }).url, payload, {
-            preserveScroll: true,
-        });
+        router.put(
+            commitmentsUpdate({ commitment: commitment.id }).url,
+            serializeCommitment(commitment, { active: !commitment.active }),
+            { preserveScroll: true },
+        );
     };
 
     const handleDelete = (commitment: CommitmentSummary) => {
@@ -163,75 +187,172 @@ export default function CommitmentsIndex() {
     };
 
     return (
-        <div className="space-y-6 p-4">
+        <div className="mx-auto w-full max-w-3xl space-y-5 p-4">
             <Head title="Commitments" />
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-semibold">Commitments</h1>
                     <p className="text-sm text-muted-foreground">
-                        Recurring outflows (mortgage, rent, memberships) that pre-fill every pay cycle. One-offs stay on pay cycles only.
+                        Recurring outflows that pre-fill every pay cycle.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" asChild>
+                    <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
                         <Link href={payCyclesIndex().url}>Back to pay cycles</Link>
+                    </Button>
+                    <Button onClick={openCreate} className="w-full sm:w-auto">
+                        <Plus className="h-4 w-4" />
+                        New commitment
                     </Button>
                 </div>
             </div>
 
-            <Card className="border-border bg-muted/40">
-                <CardContent className="space-y-2 py-4 text-sm text-muted-foreground">
-                    <p>
-                        Add a commitment once and we&apos;ll carry it into future cycles. Pause a commitment any time to keep it from reserving cash.
-                        On the Pay cycles screen, the upcoming "Save as recurring" toggle will copy an entry into this list automatically.
-                    </p>
+            <Card className="overflow-hidden py-0">
+                <CardContent className="p-0">
+                    {commitments.length === 0 ? (
+                        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+                            <p className="text-sm text-muted-foreground">
+                                No commitments yet. Add your mortgage, rent, utilities, or
+                                subscriptions so future pay cycles can pre-fill them.
+                            </p>
+                            <Button onClick={openCreate} variant="outline" size="sm">
+                                <Plus className="h-4 w-4" />
+                                Add commitment
+                            </Button>
+                        </div>
+                    ) : (
+                        <ul className="divide-y divide-border">
+                            {commitments.map((commitment) => (
+                                <li
+                                    key={commitment.id}
+                                    className="flex items-center gap-3 px-4 py-2.5"
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className={
+                                                    'truncate font-medium ' +
+                                                    (commitment.active ? '' : 'text-muted-foreground')
+                                                }
+                                            >
+                                                {commitment.name}
+                                            </span>
+                                            {!commitment.active && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="h-5 shrink-0 px-1.5 text-[10px]"
+                                                >
+                                                    Paused
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <p className="truncate text-xs text-muted-foreground">
+                                            {describeCadence(commitment)}
+                                            {commitment.category ? ` · ${commitment.category}` : ''}
+                                            {commitment.first_due_date
+                                                ? ` · next ${commitment.first_due_date}`
+                                                : ''}
+                                        </p>
+                                    </div>
+
+                                    <span className="shrink-0 text-sm font-semibold tabular-nums">
+                                        {currencyFormatter.format(Number(commitment.amount))}
+                                    </span>
+
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 shrink-0"
+                                                aria-label={`Actions for ${commitment.name}`}
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onSelect={() => openEdit(commitment)}>
+                                                <Pencil className="h-4 w-4" />
+                                                Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => handleToggle(commitment)}>
+                                                {commitment.active ? (
+                                                    <>
+                                                        <Pause className="h-4 w-4" />
+                                                        Pause
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Play className="h-4 w-4" />
+                                                        Resume
+                                                    </>
+                                                )}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onSelect={() => handleDelete(commitment)}
+                                                className="text-destructive focus:text-destructive"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                                Remove
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </CardContent>
             </Card>
 
-            <Card className="border border-border">
-                <CardHeader>
-                    <div>
-                        <p className="text-lg font-semibold">New commitment</p>
-                        <p className="text-sm text-muted-foreground">Define the recurring outflow you want every cycle to honor.</p>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleCreate} className="space-y-4">
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="create-name">Name</Label>
+            <Dialog
+                open={dialogOpen}
+                onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
+            >
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {editingId ? 'Edit commitment' : 'New commitment'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Define the recurring outflow you want every cycle to honor.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="form-name">Name</Label>
                                 <Input
-                                    id="create-name"
-                                    value={createForm.data.name}
-                                    onChange={(event) => createForm.setData('name', event.target.value)}
+                                    id="form-name"
+                                    value={form.data.name}
+                                    onChange={(event) => form.setData('name', event.target.value)}
                                     placeholder="Mortgage"
                                 />
-                                <InputError message={createForm.errors.name} />
+                                <InputError message={form.errors.name} />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="create-amount">Amount</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="form-amount">Amount</Label>
                                 <Input
-                                    id="create-amount"
+                                    id="form-amount"
                                     type="number"
                                     min="0"
                                     step="0.01"
-                                    value={createForm.data.amount}
-                                    onChange={(event) => createForm.setData('amount', event.target.value)}
+                                    value={form.data.amount}
+                                    onChange={(event) => form.setData('amount', event.target.value)}
                                     placeholder="1400"
                                 />
-                                <InputError message={createForm.errors.amount} />
+                                <InputError message={form.errors.amount} />
                             </div>
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label>Cadence</Label>
                                 <Select
-                                    value={createForm.data.recurrence_type}
-                                    onValueChange={(value) => createForm.setData('recurrence_type', value)}
+                                    value={form.data.recurrence_type}
+                                    onValueChange={(value) => form.setData('recurrence_type', value)}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Choose cadence" />
+                                        <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {recurrenceOptions.map((option) => (
@@ -241,272 +362,96 @@ export default function CommitmentsIndex() {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <InputError message={createForm.errors.recurrence_type} />
+                                <InputError message={form.errors.recurrence_type} />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="create-interval">Interval</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="form-interval">Interval</Label>
                                 <Input
-                                    id="create-interval"
+                                    id="form-interval"
                                     type="number"
                                     min={1}
                                     max={52}
-                                    value={createForm.data.recurrence_interval}
+                                    value={form.data.recurrence_interval}
                                     onChange={(event) =>
-                                        createForm.setData('recurrence_interval', Number(event.target.value) || 1)
+                                        form.setData(
+                                            'recurrence_interval',
+                                            Number(event.target.value) || 1,
+                                        )
                                     }
                                 />
-                                <p className="text-xs text-muted-foreground">Use 1 for every cycle, 2 for every second cycle, etc.</p>
-                                <InputError message={createForm.errors.recurrence_interval} />
+                                <InputError message={form.errors.recurrence_interval} />
                             </div>
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="create-date">First due date</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="form-date">First due date</Label>
                                 <Input
-                                    id="create-date"
+                                    id="form-date"
                                     type="date"
-                                    value={createForm.data.first_due_date}
-                                    onChange={(event) => createForm.setData('first_due_date', event.target.value)}
+                                    value={form.data.first_due_date}
+                                    onChange={(event) =>
+                                        form.setData('first_due_date', event.target.value)
+                                    }
                                 />
-                                <InputError message={createForm.errors.first_due_date} />
+                                <InputError message={form.errors.first_due_date} />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="create-category">Category</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="form-category">Category</Label>
                                 <Input
-                                    id="create-category"
-                                    value={createForm.data.category}
-                                    onChange={(event) => createForm.setData('category', event.target.value)}
+                                    id="form-category"
+                                    value={form.data.category}
+                                    onChange={(event) => form.setData('category', event.target.value)}
                                     placeholder="Housing"
                                 />
-                                <InputError message={createForm.errors.category} />
+                                <InputError message={form.errors.category} />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="create-notes">Notes</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="form-notes">Notes</Label>
                             <textarea
-                                id="create-notes"
-                                className="min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                value={createForm.data.notes}
-                                onChange={(event) => createForm.setData('notes', event.target.value)}
+                                id="form-notes"
+                                className="min-h-[70px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                value={form.data.notes}
+                                onChange={(event) => form.setData('notes', event.target.value)}
                                 placeholder="Anything special about this payment"
                             />
-                            <InputError message={createForm.errors.notes} />
+                            <InputError message={form.errors.notes} />
                         </div>
                         <div className="flex items-center gap-3 rounded-xl border border-dashed p-3">
                             <Checkbox
-                                id="create-active"
-                                checked={createForm.data.active}
-                                onCheckedChange={(checked) => createForm.setData('active', checked === true)}
+                                id="form-active"
+                                checked={form.data.active}
+                                onCheckedChange={(checked) =>
+                                    form.setData('active', checked === true)
+                                }
                             />
                             <div>
-                                <Label htmlFor="create-active">Active</Label>
-                                <p className="text-xs text-muted-foreground">Pause to keep this out of future cycles.</p>
+                                <Label htmlFor="form-active">Active</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Pause to keep this out of future cycles.
+                                </p>
                             </div>
                         </div>
-                        <div className="flex justify-end">
-                            <Button
-                                type="submit"
-                                disabled={createForm.processing}
-                                className="w-full sm:w-auto"
-                            >
-                                Save commitment
+
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={closeDialog}>
+                                Cancel
                             </Button>
-                        </div>
+                            <Button type="submit" disabled={form.processing}>
+                                {editingId ? 'Save changes' : 'Save commitment'}
+                            </Button>
+                        </DialogFooter>
                     </form>
-                </CardContent>
-            </Card>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {commitments.length === 0 && (
-                    <Card className="md:col-span-2 xl:col-span-3">
-                        <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                            No commitments yet. Add your mortgage, rent, utilities, or subscriptions so future pay cycles can pre-fill them.
-                        </CardContent>
-                    </Card>
-                )}
-
-                {commitments.map((commitment) => {
-                    const isEditing = editingId === commitment.id;
-
-                    return (
-                        <Card key={commitment.id} className="border border-border">
-                            <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                                <div>
-                                    <p className="text-lg font-semibold text-foreground">{commitment.name}</p>
-                                    {commitment.category && (
-                                        <p className="text-xs uppercase tracking-wide text-muted-foreground">{commitment.category}</p>
-                                    )}
-                                    {!isEditing && commitment.notes && (
-                                        <p className="mt-1 text-xs text-muted-foreground">{commitment.notes}</p>
-                                    )}
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                    <Badge variant={commitment.active ? 'secondary' : 'outline'}>
-                                        {commitment.active ? 'Active' : 'Paused'}
-                                    </Badge>
-                                    <Badge variant="outline" className="text-xs">
-                                        {describeCadence(commitment)}
-                                    </Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-4 text-sm">
-                                {isEditing ? (
-                                    <form className="space-y-4" onSubmit={handleEditSubmit}>
-                                        <div className="grid gap-3">
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor={`edit-name-${commitment.id}`}>Name</Label>
-                                                <Input
-                                                    id={`edit-name-${commitment.id}`}
-                                                    value={editForm.data.name}
-                                                    onChange={(event) => editForm.setData('name', event.target.value)}
-                                                />
-                                                <InputError message={editForm.errors.name} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor={`edit-amount-${commitment.id}`}>Amount</Label>
-                                                <Input
-                                                    id={`edit-amount-${commitment.id}`}
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    value={editForm.data.amount}
-                                                    onChange={(event) => editForm.setData('amount', event.target.value)}
-                                                />
-                                                <InputError message={editForm.errors.amount} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label>Cadence</Label>
-                                                <Select
-                                                    value={editForm.data.recurrence_type}
-                                                    onValueChange={(value) => editForm.setData('recurrence_type', value)}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {recurrenceOptions.map((option) => (
-                                                            <SelectItem key={option.value} value={option.value}>
-                                                                {option.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <InputError message={editForm.errors.recurrence_type} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor={`edit-interval-${commitment.id}`}>Interval</Label>
-                                                <Input
-                                                    id={`edit-interval-${commitment.id}`}
-                                                    type="number"
-                                                    min={1}
-                                                    max={52}
-                                                    value={editForm.data.recurrence_interval}
-                                                    onChange={(event) =>
-                                                        editForm.setData('recurrence_interval', Number(event.target.value) || 1)
-                                                    }
-                                                />
-                                                <InputError message={editForm.errors.recurrence_interval} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor={`edit-date-${commitment.id}`}>First due date</Label>
-                                                <Input
-                                                    id={`edit-date-${commitment.id}`}
-                                                    type="date"
-                                                    value={editForm.data.first_due_date}
-                                                    onChange={(event) => editForm.setData('first_due_date', event.target.value)}
-                                                />
-                                                <InputError message={editForm.errors.first_due_date} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor={`edit-category-${commitment.id}`}>Category</Label>
-                                                <Input
-                                                    id={`edit-category-${commitment.id}`}
-                                                    value={editForm.data.category}
-                                                    onChange={(event) => editForm.setData('category', event.target.value)}
-                                                />
-                                                <InputError message={editForm.errors.category} />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor={`edit-notes-${commitment.id}`}>Notes</Label>
-                                                <textarea
-                                                    id={`edit-notes-${commitment.id}`}
-                                                    className="min-h-[70px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                                    value={editForm.data.notes}
-                                                    onChange={(event) => editForm.setData('notes', event.target.value)}
-                                                />
-                                                <InputError message={editForm.errors.notes} />
-                                            </div>
-                                            <div className="flex items-center gap-2 rounded-xl border border-dashed p-3">
-                                                <Checkbox
-                                                    id={`edit-active-${commitment.id}`}
-                                                    checked={editForm.data.active}
-                                                    onCheckedChange={(checked) => editForm.setData('active', checked === true)}
-                                                />
-                                                <div>
-                                                    <Label htmlFor={`edit-active-${commitment.id}`}>Active</Label>
-                                                    <p className="text-xs text-muted-foreground">Paused commitments skip future cycles.</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Button type="submit" size="sm" disabled={editForm.processing}>
-                                                Save
-                                            </Button>
-                                            <Button type="button" variant="ghost" size="sm" onClick={cancelEditing}>
-                                                Cancel
-                                            </Button>
-                                        </div>
-                                    </form>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className="rounded-2xl bg-muted/40 p-4">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground">Amount</span>
-                                                <span className="font-medium">
-                                                    {currencyFormatter.format(Number(commitment.amount))}
-                                                </span>
-                                            </div>
-                                            <div className="mt-2 flex items-center justify-between">
-                                                <span className="text-muted-foreground">Cadence</span>
-                                                <span className="font-medium text-foreground">{describeCadence(commitment)}</span>
-                                            </div>
-                                            <div className="mt-2 flex items-center justify-between">
-                                                <span className="text-muted-foreground">Next due</span>
-                                                <span className="font-medium text-foreground">
-                                                    {commitment.first_due_date ?? '—'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-wrap items-center gap-3">
-                                            <Button variant="outline" size="sm" onClick={() => startEditing(commitment)}>
-                                                Edit
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleToggle(commitment)}
-                                            >
-                                                {commitment.active ? 'Pause' : 'Resume'}
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-destructive"
-                                                onClick={() => handleDelete(commitment)}
-                                            >
-                                                Remove
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    );
-                })}
-            </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
 
-CommitmentsIndex.l
+CommitmentsIndex.layout = {
+    breadcrumbs: [
+        {
+            title: 'Commitments',
+            href: commitmentsIndex().url,
+        } as BreadcrumbItem,
+    ],
+};
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   

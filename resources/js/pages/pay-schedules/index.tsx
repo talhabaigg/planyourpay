@@ -1,10 +1,23 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo } from 'react';
-import { Button } from '@/components/ui/button';
+import { MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { BreadcrumbItem } from '@/types/navigation';
-import { create as paySchedulesCreate, edit as paySchedulesEdit, destroy as paySchedulesDestroy, index as paySchedulesIndex } from '@/routes/pay-schedules';
+import {
+    create as paySchedulesCreate,
+    edit as paySchedulesEdit,
+    destroy as paySchedulesDestroy,
+    index as paySchedulesIndex,
+} from '@/routes/pay-schedules';
 
 interface PayScheduleSummary {
     id: number;
@@ -13,9 +26,16 @@ interface PayScheduleSummary {
     cadence: string;
     recurrence_interval: number;
     next_pay_date: string;
+    upcoming_pay_date: string | null;
     is_primary: boolean;
     notes?: string | null;
 }
+
+const cadenceLabels: Record<string, string> = {
+    weekly: 'Weekly',
+    fortnightly: 'Fortnightly',
+    monthly: 'Monthly',
+};
 
 export default function PaySchedulesIndex() {
     const { schedules = [] } = usePage<{ schedules: PayScheduleSummary[] }>().props;
@@ -27,20 +47,32 @@ export default function PaySchedulesIndex() {
                 currency: 'AUD',
                 minimumFractionDigits: 2,
             }),
-        []
+        [],
     );
 
-    const cadenceLabels: Record<string, string> = {
-        weekly: 'Weekly',
-        fortnightly: 'Fortnightly',
-        monthly: 'Monthly',
+    const describeCadence = (schedule: PayScheduleSummary) => {
+        const base = cadenceLabels[schedule.cadence] ?? schedule.cadence;
+
+        return schedule.recurrence_interval > 1
+            ? `${base} · every ${schedule.recurrence_interval}`
+            : base;
+    };
+
+    const handleDelete = (schedule: PayScheduleSummary) => {
+        if (!window.confirm(`Remove ${schedule.name}?`)) {
+            return;
+        }
+
+        router.delete(paySchedulesDestroy({ pay_schedule: schedule.id }).url, {
+            preserveScroll: true,
+        });
     };
 
     return (
-        <div className="space-y-6 p-4">
+        <div className="mx-auto w-full max-w-3xl space-y-5 p-4">
             <Head title="Pay schedules" />
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-semibold">Pay schedules</h1>
                     <p className="text-sm text-muted-foreground">
@@ -48,77 +80,60 @@ export default function PaySchedulesIndex() {
                     </p>
                 </div>
                 <Button asChild className="w-full sm:w-auto">
-                    <Link href={paySchedulesCreate().url}>Add schedule</Link>
+                    <Link href={paySchedulesCreate().url}>
+                        <Plus className="h-4 w-4" />
+                        Add schedule
+                    </Link>
                 </Button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {schedules.length === 0 && (
-                    <Card className="md:col-span-2 xl:col-span-3">
-                        <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                            You don’t have any pay schedules yet. Create one to start planning periods.
-                        </CardContent>
-                    </Card>
-                )}
+            <Card className="overflow-hidden py-0">
+                <CardContent className="p-0">
+                    {schedules.length === 0 ? (
+                        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+                            <p className="text-sm text-muted-foreground">
+                                You don’t have any pay schedules yet. Create one to start
+                                planning periods.
+                            </p>
+                            <Button asChild variant="outline" size="sm">
+                                <Link href={paySchedulesCreate().url}>
+                                    <Plus className="h-4 w-4" />
+                                    Add schedule
+                                </Link>
+                            </Button>
+                        </div>
+                    ) : (
+                        <ul className="divide-y divide-border">
+                            {schedules.map((schedule) => (
+                                <li
+                                    key={schedule.id}
+                                    className="flex items-center gap-3 px-4 py-2.5"
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="truncate font-medium">
+                                                {schedule.name}
+                                            </span>
+                                            {schedule.is_primary && (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="h-5 shrink-0 px-1.5 text-[10px]"
+                                                >
+                                                    Primary
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <p className="truncate text-xs text-muted-foreground">
+                                            {describeCadence(schedule)} · next{' '}
+                                            {schedule.upcoming_pay_date ?? schedule.next_pay_date}
+                                        </p>
+                                    </div>
 
-                {schedules.map((schedule) => (
-                    <Card key={schedule.id} className="border border-border">
-                        <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                            <div>
-                                <p className="text-lg font-semibold text-foreground">{schedule.name}</p>
-                                {schedule.notes && (
-                                    <p className="text-xs text-muted-foreground mt-1">{schedule.notes}</p>
-                                )}
-                            </div>
-                            {schedule.is_primary && <Badge variant="secondary">Primary</Badge>}
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="rounded-2xl bg-muted/40 p-4 text-sm">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground">Amount</span>
-                                    <span className="font-medium">
+                                    <span className="shrink-0 text-sm font-semibold tabular-nums">
                                         {currencyFormatter.format(Number(schedule.amount))}
                                     </span>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between">
-                                    <span className="text-muted-foreground">Frequency</span>
-                                    <span className="font-medium text-foreground">
-                                        {cadenceLabels[schedule.cadence] ?? schedule.cadence}
-                                        {schedule.recurrence_interval > 1 && ` · every ${schedule.recurrence_interval}`}
-                                    </span>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between">
-                                    <span className="text-muted-foreground">Next pay</span>
-                                    <span className="font-medium text-foreground">{schedule.next_pay_date}</span>
-                                </div>
-                            </div>
 
-                            <div className="flex items-center justify-between gap-3">
-                                <Button variant="outline" size="sm" asChild>
-                                    <Link href={paySchedulesEdit({ pay_schedule: schedule.id }).url}>Edit</Link>
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                        router.delete(paySchedulesDestroy({ pay_schedule: schedule.id }).url, {
-                                            preserveScroll: true,
-                                        })
-                                    }
-                                >
-                                    Remove
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-PaySchedulesIndex.layout = {
-    breadcrumbs: [
-        {
-            title: 'Pay schedules',
-            href: paySc
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                               

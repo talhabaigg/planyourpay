@@ -17,7 +17,9 @@ export function Breadcrumbs({
 }) {
     return (
         <>
-            {breadcrumbs.length > 0 && (
+            {/* Only show a trail with real hierarchy; a lone top-level crumb
+                just duplicates the page heading, so skip it. */}
+            {breadcrumbs.length > 1 && (
                 <Breadcrumb>
                     <BreadcrumbList>
                         {breadcrumbs.map((item, index) => {
@@ -40,11 +42,4 @@ export function Breadcrumbs({
                                     </BreadcrumbItem>
                                     {!isLast && <BreadcrumbSeparator />}
                                 </Fragment>
-                            );
-                        })}
-                    </BreadcrumbList>
-                </Breadcrumb>
-            )}
-        </>
-    );
-}
+                   

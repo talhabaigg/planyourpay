@@ -1,198 +1,294 @@
-import { Head, Link } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useState, type FormEvent } from 'react';
+import { Check, MoreVertical, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types/navigation';
 import { index as payCyclesIndex } from '@/routes/pay-cycles';
-import { index as commitmentsIndex } from '@/routes/commitments';
+import { index as paySchedulesIndex } from '@/routes/pay-schedules';
 
-interface CycleTransaction {
+type AllocationType = 'inflow' | 'outflow';
+
+interface Allocation {
     id: number;
+    type: AllocationType;
     label: string;
     amount: number;
+    date: string | null;
+    status: 'planned' | 'paid' | 'skipped';
+    is_recurring: boolean;
 }
 
-interface PayCycleResource {
+interface Plan {
     id: number;
-    label: string;
-    start_date: string;
-    end_date: string;
-    schedule_name: string;
-    income: string;
-    status: string;
-    inflows: CycleTransaction[];
-    outflows: CycleTransaction[];
-    surplus: string;
+    scheduleName: string;
+    periodStart: string;
+    periodEnd: string;
+    inflowTotal: number;
+    outflowTotal: number;
+    remaining: number;
+    allocations: Allocation[];
+}
+
+interface Cycle {
+    start: string;
+    end: string;
+    isCurrent: boolean;
 }
 
 interface PageProps {
-    cycles: PayCycleResource[];
     hasPrimarySchedule: boolean;
+    plan: Plan | null;
+    cycles: Cycle[];
 }
 
-export default function PayCyclesIndex({ cycles = [], hasPrimarySchedule }: PageProps) {
-    const currencyFormatter = useMemo(
-        () =>
-            new Intl.NumberFormat(undefined, {
-                style: 'currency',
-                currency: 'AUD',
-                minimumFractionDigits: 2,
-            }),
-        []
-    );
+const currency = new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'AUD',
+    maximumFractionDigits: 0,
+});
 
-    const [selectedId, setSelectedId] = useState<number | null>(cycles[0]?.id ?? null);
-    const selectedCycle = cycles.find((cycle) => cycle.id === selectedId) ?? cycles[0];
-    const inflowItems = selectedCycle?.inflows ?? [];
-    const outflowItems = selectedCycle?.outflows ?? [];
-    const inflowTotal = inflowItems.reduce((sum, entry) => sum + Number(entry.amount), 0);
-    const outflowTotal = outflowItems.reduce((sum, entry) => sum + Number(entry.amount), 0);
+function formatDate(iso: string): string {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime())
+        ? iso
+        : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
 
-    useEffect(() => {
-        if (cycles.length && !selectedId) {
-            setSelectedId(cycles[0].id);
-        }
-    }, [cycles, selectedId]);
+export default function PayCyclesIndex({
+    hasPrimarySchedule,
+    plan,
+    cycles = [],
+}: PageProps) {
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
-    return (
-        <div className="space-y-6 p-4">
-            <Head title="Pay cycles" />
+    const form = useForm<{
+        type: AllocationType;
+        label: string;
+        amount: string;
+        date: string;
+        notes: string;
+    }>({ type: 'outflow', label: '', amount: '', date: '', notes: '' });
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
+    if (!hasPrimarySchedule || !plan) {
+        return (
+            <div className="mx-auto w-full max-w-3xl space-y-5 p-4">
+                <Head title="Pay cycles" />
                 <div>
                     <h1 className="text-2xl font-semibold">Pay cycles</h1>
                     <p className="text-sm text-muted-foreground">
-                        Upcoming windows anchored to your primary pay schedule. Pick a cycle to inspect the plan.
+                        Plan the actual pay — income, bills and any one-offs.
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" asChild>
-                        <Link href={commitmentsIndex().url}>Manage commitments</Link>
-                    </Button>
-                    <Button variant="outline" size="sm" disabled>
-                        Planner coming soon
-                    </Button>
-                </div>
-            </div>
-
-            {!hasPrimarySchedule && (
                 <Card>
-                    <CardContent className="py-6 text-sm text-muted-foreground">
-                        Add a primary pay schedule first to generate pay cycles.
+                    <CardContent className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+                        <p className="text-sm text-muted-foreground">
+                            Add a primary pay schedule first to generate pay cycles.
+                        </p>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={paySchedulesIndex().url}>Add pay schedule</Link>
+                        </Button>
                     </CardContent>
                 </Card>
-            )}
+            </div>
+        );
+    }
 
-            {hasPrimarySchedule && cycles.length > 0 && (
-                <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-                    <Card className="border-border">
-                        <CardHeader className="space-y-2">
-                            <p className="text-sm font-medium text-muted-foreground">Select cycle</p>
-                            <select
-                                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                                value={selectedId ?? ''}
-                                onChange={(event) => setSelectedId(Number(event.target.value))}
+    const byDate = (a: Allocation, b: Allocation) =>
+        (a.date ?? '').localeCompare(b.date ?? '');
+    const inflows = plan.allocations.filter((a) => a.type === 'inflow').sort(byDate);
+    const outflows = plan.allocations.filter((a) => a.type === 'outflow').sort(byDate);
+
+    const openAdd = (type: AllocationType) => {
+        setEditingId(null);
+        // Default new entries to the start of the current pay period.
+        form.setData({
+            type,
+            label: '',
+            amount: '',
+            date: plan.periodStart,
+            notes: '',
+        });
+        form.clearErrors();
+        setDialogOpen(true);
+    };
+
+    const openEdit = (a: Allocation) => {
+        setEditingId(a.id);
+        form.setData({
+            type: a.type,
+            label: a.label,
+            amount: String(a.amount),
+            date: a.date ?? plan.periodStart,
+            notes: '',
+        });
+        form.clearErrors();
+        setDialogOpen(true);
+    };
+
+    const closeDialog = () => {
+        setDialogOpen(false);
+        setEditingId(null);
+        form.reset();
+        form.clearErrors();
+    };
+
+    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (editingId) {
+            form.put(`/pay-plan-allocations/${editingId}`, {
+                preserveScroll: true,
+                onSuccess: closeDialog,
+            });
+            return;
+        }
+
+        form.post(`/pay-plans/${plan.id}/allocations`, {
+            preserveScroll: true,
+            onSuccess: closeDialog,
+        });
+    };
+
+    const togglePaid = (a: Allocation) => {
+        router.put(
+            `/pay-plan-allocations/${a.id}`,
+            { status: a.status === 'paid' ? 'planned' : 'paid' },
+            { preserveScroll: true },
+        );
+    };
+
+    const remove = (a: Allocation) => {
+        if (!window.confirm(`Remove ${a.label}?`)) return;
+        router.delete(`/pay-plan-allocations/${a.id}`, { preserveScroll: true });
+    };
+
+    const renderRow = (a: Allocation) => {
+        const paid = a.status === 'paid';
+
+        return (
+            <li key={a.id} className="flex items-center gap-3 px-4 py-2.5">
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                        <span
+                            className={cn(
+                                'truncate font-medium',
+                                paid && 'text-muted-foreground line-through',
+                            )}
+                        >
+                            {a.label}
+                        </span>
+                        {a.is_recurring && (
+                            <Badge
+                                variant="outline"
+                                className="h-5 shrink-0 px-1.5 text-[10px]"
                             >
-                                {cycles.map((cycle) => (
-                                    <option key={cycle.id} value={cycle.id}>
-                                        {cycle.label} ({cycle.start_date} → {cycle.end_date})
-                                    </option>
-                                ))}
-                            </select>
-                        </CardHeader>
-                    </Card>
-
-                    <div className="space-y-4">
-                        <Card className="border border-border">
-                            <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                                <div>
-                                    <p className="text-lg font-semibold text-foreground">{selectedCycle?.label}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {selectedCycle?.start_date} → {selectedCycle?.end_date}
-                                    </p>
-                                </div>
-                                <span className="rounded-full bg-muted px-3 py-1 text-xs text-foreground">
-                                    {selectedCycle?.status}
-                                </span>
-                            </CardHeader>
-                            <CardContent className="space-y-4 text-sm">
-                                <div className="rounded-2xl bg-muted/40 p-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Schedule</span>
-                                        <span className="font-medium">{selectedCycle?.schedule_name}</span>
-                                    </div>
-                                    <div className="mt-2 flex items-center justify-between">
-                                        <span className="text-muted-foreground">Income</span>
-                                        <span className="font-medium">
-                                            {currencyFormatter.format(Number(selectedCycle?.income || 0))}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="grid gap-3 md:grid-cols-2">
-                                    <Card className="border border-dashed">
-                                        <CardHeader className="pb-2">
-                                            <p className="text-sm font-medium text-muted-foreground">Inflow</p>
-                                            <p className="text-2xl font-semibold">
-                                                {currencyFormatter.format(inflowTotal)}
-                                            </p>
-                                        </CardHeader>
-                                        <CardContent className="space-y-2 text-sm">
-                                            {inflowItems.map((item) => (
-                                                <div key={item.id} className="flex items-center justify-between">
-                                                    <span>{item.label}</span>
-                                                    <span className="font-medium">
-                                                        {currencyFormatter.format(Number(item.amount))}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </CardContent>
-                                    </Card>
-                                    <Card className="border border-dashed">
-                                        <CardHeader className="pb-2">
-                                            <p className="text-sm font-medium text-muted-foreground">Outflow</p>
-                                            <p className="text-2xl font-semibold">
-                                                {currencyFormatter.format(outflowTotal)}
-                                            </p>
-                                        </CardHeader>
-                                        <CardContent className="space-y-2 text-sm">
-                                            {outflowItems.map((item) => (
-                                                <div key={item.id} className="flex items-center justify-between">
-                                                    <span>{item.label}</span>
-                                                    <span className="font-medium">
-                                                        {currencyFormatter.format(Number(item.amount))}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                <Card className="border border-dashed bg-muted/30">
-                                    <CardHeader className="pb-1">
-                                        <p className="text-sm font-medium text-muted-foreground">Surplus</p>
-                                        <p className="text-xl font-semibold text-foreground">
-                                            {currencyFormatter.format(inflowTotal - outflowTotal)}
-                                        </p>
-                                    </CardHeader>
-                                    <CardContent className="text-xs text-muted-foreground">
-                                        Surplus = inflow − outflow. We'll update this as allocations become editable.
-                                    </CardContent>
-                                </Card>
-                            </CardContent>
-                        </Card>
+                                Recurring
+                            </Badge>
+                        )}
+                        {paid && (
+                            <Badge
+                                variant="secondary"
+                                className="h-5 shrink-0 px-1.5 text-[10px]"
+                            >
+                                Paid
+                            </Badge>
+                        )}
                     </div>
+                    {a.date && (
+                        <p className="text-xs text-muted-foreground">
+                            {formatDate(a.date)}
+                        </p>
+                    )}
                 </div>
-            )}
-        </div>
-    );
-}
+                <span
+                    className={cn(
+                        'shrink-0 text-sm font-semibold tabular-nums',
+                        a.type === 'inflow' && 'text-emerald-600 dark:text-emerald-500',
+                    )}
+                >
+                    {a.type === 'outflow' ? '−' : '+'}
+                    {currency.format(a.amount)}
+                </span>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            aria-label={`Actions for ${a.label}`}
+                        >
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => togglePaid(a)}>
+                            {paid ? (
+                                <>
+                                    <RotateCcw className="h-4 w-4" />
+                                    Mark planned
+                                </>
+                            ) : (
+                                <>
+                                    <Check className="h-4 w-4" />
+                                    Mark paid
+                                </>
+                            )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => openEdit(a)}>
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            onSelect={() => remove(a)}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Remove
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </li>
+        );
+    };
 
-PayCyclesIndex.layout = {
-    breadcrumbs: [
-        {
-            title: 'Pay cycles',
-            href: payCyclesIndex().url,
-        } as BreadcrumbItem,
-    ],
-};
+    const section = (
+        title: string,
+        type: AllocationType,
+        items: Allocation[],
+        total: number,
+        emptyText: string,
+    ) => (
+        <Card className="gap-0 overflow-hidden py-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3">
+                <CardTitle className="text-base">{title}</CardTitle>
+                <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold tabular-nums text-mu
