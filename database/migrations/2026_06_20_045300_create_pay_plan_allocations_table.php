@@ -21,6 +21,7 @@ return new class extends Migration
             $table->enum('status', ['planned', 'paid', 'skipped'])->default('planned');
             $table->text('notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

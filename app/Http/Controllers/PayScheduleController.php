@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Http\Controllers\Settings;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\PaySchedule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,26 +14,23 @@ class PayScheduleController extends Controller
 {
     protected array $cadenceOptions = ['weekly', 'fortnightly', 'monthly'];
 
-    public function index(Request $request): Response
+    public function index(): Response
     {
         $schedules = PaySchedule::orderByDesc('is_primary')
             ->orderBy('next_pay_date')
             ->get()
-            ->map(function (PaySchedule $schedule) {
-                return [
-                    'id' => $schedule->id,
-                    'name' => $schedule->name,
-                    'amount' => $schedule->amount,
-                    'cadence' => $schedule->cadence,
-                    'recurrence_interval' => $schedule->recurrence_interval,
-                    'next_pay_date' => optional($schedule->next_pay_date)->toDateString(),
-                    'is_primary' => $schedule->is_primary,
-                    'notes' => $schedule->notes,
-                ];
-            });
+            ->map(fn (PaySchedule $schedule) => $this->present($schedule));
 
-        return Inertia::render('settings/pay-schedules', [
+        \Log::debug('pay-schedules.index', ['count' => $schedules->count()]);
+
+        return Inertia::render('pay-schedules/index', [
             'schedules' => $schedules,
+        ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('pay-schedules/create', [
             'cadenceOptions' => $this->cadenceOptions,
         ]);
     }
@@ -42,30 +38,50 @@ class PayScheduleController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateData($request);
-
-        $this->handlePrimaryFlag($request->user(), $validated['is_primary'] ?? false);
+        $this->handlePrimaryFlag($request->user()->id, $validated['is_primary'] ?? false);
 
         $request->user()->paySchedules()->create($validated);
 
-        return back()->with('success', 'Pay schedule created.');
+        return redirect()->route('pay-schedules.index')->with('success', 'Pay schedule created.');
+    }
+
+    public function edit(PaySchedule $paySchedule): Response
+    {
+        return Inertia::render('pay-schedules/edit', [
+            'schedule' => $this->present($paySchedule),
+            'cadenceOptions' => $this->cadenceOptions,
+        ]);
     }
 
     public function update(Request $request, PaySchedule $paySchedule): RedirectResponse
     {
         $validated = $this->validateData($request, $paySchedule->id);
-
-        $this->handlePrimaryFlag($request->user(), $validated['is_primary'] ?? false, $paySchedule->id);
+        $this->handlePrimaryFlag($request->user()->id, $validated['is_primary'] ?? false, $paySchedule->id);
 
         $paySchedule->update($validated);
 
-        return back()->with('success', 'Pay schedule updated.');
+        return redirect()->route('pay-schedules.index')->with('success', 'Pay schedule updated.');
     }
 
     public function destroy(PaySchedule $paySchedule): RedirectResponse
     {
         $paySchedule->delete();
 
-        return back()->with('success', 'Pay schedule removed.');
+        return redirect()->route('pay-schedules.index')->with('success', 'Pay schedule removed.');
+    }
+
+    protected function present(PaySchedule $schedule): array
+    {
+        return [
+            'id' => $schedule->id,
+            'name' => $schedule->name,
+            'amount' => $schedule->amount,
+            'cadence' => $schedule->cadence,
+            'recurrence_interval' => $schedule->recurrence_interval,
+            'next_pay_date' => optional($schedule->next_pay_date)->toDateString(),
+            'is_primary' => $schedule->is_primary,
+            'notes' => $schedule->notes,
+        ];
     }
 
     protected function validateData(Request $request, ?int $payScheduleId = null): array
@@ -98,10 +114,10 @@ class PayScheduleController extends Controller
         ]);
     }
 
-    protected function handlePrimaryFlag($user, bool $isPrimary, ?int $ignoreId = null): void
+    protected function handlePrimaryFlag(int $userId, bool $isPrimary, ?int $ignoreId = null): void
     {
         if ($isPrimary) {
-            $query = PaySchedule::where('user_id', $user->id);
+            $query = PaySchedule::where('user_id', $userId);
             if ($ignoreId) {
                 $query->where('id', '<>', $ignoreId);
             }

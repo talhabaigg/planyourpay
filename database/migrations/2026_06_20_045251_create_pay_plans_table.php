@@ -21,6 +21,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->boolean('locked')->default(false);
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['user_id', 'period_start_date']);
         });
