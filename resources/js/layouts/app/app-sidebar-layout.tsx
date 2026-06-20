@@ -15,4 +15,12 @@ export default function AppSidebarLayout({
             {/* pb clears the fixed mobile bottom bar; removed at md+ */}
             <AppContent
                 variant="sidebar"
-                className="overfl
+                className="overflow-x-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+            >
+                <AppSidebarHeader breadcrumbs={breadcrumbs} />
+                {children}
+            </AppContent>
+            <BottomNav />
+        </AppShell>
+    );
+}

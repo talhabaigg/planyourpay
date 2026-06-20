@@ -13,6 +13,7 @@ class PayPlanAllocation extends Model
     protected $fillable = [
         'pay_plan_id',
         'commitment_id',
+        'saver_plan_id',
         'type',
         'label',
         'amount',
@@ -33,4 +34,6 @@ class PayPlanAllocation extends Model
 
     public function commitment()
     {
-        return $th
+        return $this->belongsTo(Commitment::class);
+    }
+}

@@ -42,4 +42,11 @@ export function Breadcrumbs({
                                     </BreadcrumbItem>
                                     {!isLast && <BreadcrumbSeparator />}
                                 </Fragment>
-                   
+                            );
+                        })}
+                    </BreadcrumbList>
+                </Breadcrumb>
+            )}
+        </>
+    );
+}

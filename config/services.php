@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'up' => [
+        'token' => env('UP_API_TOKEN'),
+        'base' => env('UP_API_BASE', 'https://api.up.com.au/api/v1'),
+    ],
+
 ];

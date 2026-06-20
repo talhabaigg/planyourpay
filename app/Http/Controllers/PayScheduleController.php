@@ -114,9 +114,39 @@ class PayScheduleController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
-            'cadence' => ['required', 'in:' . implode(',', $this->cadenceOptions)],
+            'cadence' => ['required', 'in:'.implode(',', $this->cadenceOptions)],
             'recurrence_interval' => ['nullable', 'integer', 'min:1', 'max:12'],
             'next_pay_date' => ['required', 'date'],
             'is_primary' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
         ]);
+
+        $data['recurrence_interval'] = $data['recurrence_interval'] ?? 1;
+        $data['day_of_week'] = Carbon::parse($data['next_pay_date'])->dayOfWeek;
+        $data['day_of_month'] = Carbon::parse($data['next_pay_date'])->day;
+        $data['is_primary'] = (bool) ($data['is_primary'] ?? false);
+
+        return Arr::only($data, [
+            'name',
+            'amount',
+            'cadence',
+            'recurrence_interval',
+            'next_pay_date',
+            'day_of_week',
+            'day_of_month',
+            'notes',
+            'is_primary',
+        ]);
+    }
+
+    protected function handlePrimaryFlag(int $userId, bool $isPrimary, ?int $ignoreId = null): void
+    {
+        if ($isPrimary) {
+            $query = PaySchedule::where('user_id', $userId);
+            if ($ignoreId) {
+                $query->where('id', '<>', $ignoreId);
+            }
+            $query->update(['is_primary' => false]);
+        }
+    }
+}

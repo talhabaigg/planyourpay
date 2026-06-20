@@ -39,7 +39,7 @@ class Commitment extends Model
         });
 
         static::creating(function ($model) {
-            if (!$model->user_id && Auth::id()) {
+            if (! $model->user_id && Auth::id()) {
                 $model->user_id = Auth::id();
             }
         });

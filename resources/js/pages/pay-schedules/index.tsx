@@ -136,4 +136,52 @@ export default function PaySchedulesIndex() {
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button
-                               
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 shrink-0"
+                                                aria-label={`Actions for ${schedule.name}`}
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem asChild>
+                                                <Link
+                                                    href={
+                                                        paySchedulesEdit({
+                                                            pay_schedule: schedule.id,
+                                                        }).url
+                                                    }
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                    Edit
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onSelect={() => handleDelete(schedule)}
+                                                className="text-destructive focus:text-destructive"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                                Remove
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+PaySchedulesIndex.layout = {
+    breadcrumbs: [
+        {
+            title: 'Pay schedules',
+            href: paySchedulesIndex().url,
+        } as BreadcrumbItem,
+    ],
+};
