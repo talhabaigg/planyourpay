@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -50,3 +51,19 @@ class User extends Authenticatable implements PasskeyUser
         ];
     }
 }
+
+    public function paySchedules(): HasMany
+    {
+        return $this->hasMany(PaySchedule::class);
+    }
+
+    public function commitments(): HasMany
+    {
+        return $this->hasMany(Commitment::class);
+    }
+
+    public function payPlans(): HasMany
+    {
+        return $this->hasMany(PayPlan::class);
+    }
+

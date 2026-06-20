@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\PayScheduleController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 /* @chisel-password-confirmation */
@@ -12,6 +13,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('settings/pay-schedules', [PayScheduleController::class, 'index'])->name('pay-schedules.index');
+    Route::post('settings/pay-schedules', [PayScheduleController::class, 'store'])->name('pay-schedules.store');
+    Route::put('settings/pay-schedules/{paySchedule}', [PayScheduleController::class, 'update'])->name('pay-schedules.update');
+    Route::delete('settings/pay-schedules/{paySchedule}', [PayScheduleController::class, 'destroy'])->name('pay-schedules.destroy');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
