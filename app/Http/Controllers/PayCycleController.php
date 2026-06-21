@@ -111,7 +111,7 @@ class PayCycleController extends Controller
         $inflow = (float) $allocations->where('type', 'inflow')->sum(fn ($a) => $a['payPortion']);
         $outflow = (float) $allocations->where('type', 'outflow')->sum(fn ($a) => $a['payPortion']);
 
-                $saverPlans = $this->saverPlanOptions($request->user());
+        $saverPlans = $this->saverPlanOptions($request->user());
 
         return Inertia::render('pay-cycles/index', [
             'hasPrimarySchedule' => true,
@@ -374,6 +374,9 @@ class PayCycleController extends Controller
         return $date->lt($end) ? $date : null;
     }
 
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
     protected function saverPlanOptions(User $user): Collection
     {
         if (! Schema::hasTable('saver_plans')) {
@@ -409,15 +412,25 @@ class PayCycleController extends Controller
 
         $plans = SaverPlan::where('user_id', $user->id)->get();
 
-        return $plans->map(function (SaverPlan $plan) use ($remote) {
-            $remoteSaver = $remote[$plan->up_account_id] ?? null;
-
-            return [
-                'id' => $plan->id,
-                'name' => $plan->name ?? $remoteSaver['name'] ?? 'Saver',
-                'balance' => $remoteSaver['balance'] ?? null,
-            ];
-        });
+        return $plans
+            ->map(fn (SaverPlan $plan) => $this->saverPlanRow($plan, $remote))
+            ->values();
     }
 
+    /**
+     * Build a single Saver plan option, merging any matching remote Up saver.
+     *
+     * @param  Collection<array-key, mixed>  $remote
+     * @return array<string, mixed>
+     */
+    protected function saverPlanRow(SaverPlan $plan, Collection $remote): array
+    {
+        $remoteSaver = $remote[$plan->up_account_id] ?? null;
+
+        return [
+            'id' => $plan->id,
+            'name' => $plan->name ?? $remoteSaver['name'] ?? 'Saver',
+            'balance' => $remoteSaver['balance'] ?? null,
+        ];
+    }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AllocationCoverController;
 use App\Http\Controllers\CommitmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PayCycleController;
@@ -22,9 +23,9 @@ Route::middleware(['auth'])->group(function () {
     Route::put('pay-plan-allocations/{allocation}', [PayPlanAllocationController::class, 'update'])->name('pay-plan-allocations.update');
     Route::delete('pay-plan-allocations/{allocation}', [PayPlanAllocationController::class, 'destroy'])->name('pay-plan-allocations.destroy');
     Route::resource('commitments', CommitmentController::class)->only(['index', 'store', 'update', 'destroy']);
-    Route::post('pay-plan-allocations/{allocation}/covers', [\App\Http\Controllers\AllocationCoverController::class, 'store'])->name('allocation-covers.store');
-    Route::put('allocation-covers/{allocationCover}', [\App\Http\Controllers\AllocationCoverController::class, 'update'])->name('allocation-covers.update');
-    Route::delete('allocation-covers/{allocationCover}', [\App\Http\Controllers\AllocationCoverController::class, 'destroy'])->name('allocation-covers.destroy');
+    Route::post('pay-plan-allocations/{allocation}/covers', [AllocationCoverController::class, 'store'])->name('allocation-covers.store');
+    Route::put('allocation-covers/{allocationCover}', [AllocationCoverController::class, 'update'])->name('allocation-covers.update');
+    Route::delete('allocation-covers/{allocationCover}', [AllocationCoverController::class, 'destroy'])->name('allocation-covers.destroy');
     Route::get('savers', [SaverController::class, 'index'])->name('savers.index');
     Route::post('savers/connect', [SaverController::class, 'connect'])->name('savers.connect');
     Route::delete('savers/disconnect', [SaverController::class, 'disconnect'])->name('savers.disconnect');

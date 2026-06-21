@@ -42,6 +42,9 @@ class AllocationCoverController extends Controller
         return back()->with('success', 'Cover removed.');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function validatePayload(Request $request, PayPlanAllocation $allocation, ?int $ignoreId = null): array
     {
         $data = $request->validate([

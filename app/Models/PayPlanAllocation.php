@@ -48,5 +48,4 @@ class PayPlanAllocation extends Model
     {
         return $this->hasMany(AllocationCover::class);
     }
-
 }

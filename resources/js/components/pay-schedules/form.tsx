@@ -1,4 +1,4 @@
-import type { UseFormReturnType } from '@inertiajs/react';
+import type { InertiaFormProps } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ export type PayScheduleFormData = {
 };
 
 interface Props {
-    form: UseFormReturnType<PayScheduleFormData>;
+    form: InertiaFormProps<PayScheduleFormData>;
     cadenceOptions: string[];
     onSubmit: () => void;
     submitLabel: string;

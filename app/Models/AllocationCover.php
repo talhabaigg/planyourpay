@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AllocationCover extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'pay_plan_allocation_id',
         'source',

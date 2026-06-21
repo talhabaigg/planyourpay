@@ -34,7 +34,7 @@ class DashboardController extends Controller
 
         if ($period['start']) {
             $plan = PayPlan::query()
-                ->with(['allocations.covers.saverPlan'])
+                ->with(['allocations.covers.saverPlan', 'allocations.commitment'])
                 ->whereDate('period_start_date', $period['start'])
                 ->first();
         }
@@ -83,12 +83,15 @@ class DashboardController extends Controller
                                 'saverPlan' => $cover->saverPlan?->only(['id', 'name']),
                             ];
                         }),
-                        'category' => $allocation->is_recurring ? 'Recurring' : null,
+                        'category' => $allocation->commitment
+                            && $allocation->commitment->recurrence_type !== 'one_time'
+                                ? 'Recurring'
+                                : null,
                         'due' => $due,
                     ];
                 })
-                ->filter(fn ($item) => $item['due']?->gte($today))
-                ->sortBy(fn ($item) => $item['due']?->timestamp ?? PHP_INT_MAX)
+                ->filter(fn ($item) => $item['due'] !== null && $item['due']->gte($today))
+                ->sortBy(fn ($item) => $item['due']->timestamp)
                 ->map(fn ($item) => [
                     'id' => $item['id'],
                     'name' => $item['name'],
@@ -96,7 +99,7 @@ class DashboardController extends Controller
                     'pay_amount' => $item['pay_amount'],
                     'covers' => $item['covers'],
                     'category' => $item['category'],
-                    'due' => $item['due']?->toDateString(),
+                    'due' => $item['due']->toDateString(),
                 ])
                 ->take(5)
                 ->values();
@@ -124,13 +127,11 @@ class DashboardController extends Controller
                 ->values();
         }
 
-        $surplus = $income !== null && isset($committed)
-            ? $income - $committed
-            : ($income !== null ? $income : null);
+        $surplus = $income !== null ? $income - $committed : null;
 
         return Inertia::render('dashboard', [
             'income' => $income,
-            'committed' => $committed ?? 0,
+            'committed' => $committed,
             'surplus' => $surplus,
             'primaryName' => $primary?->name,
             'payPeriodStart' => $period['start'],

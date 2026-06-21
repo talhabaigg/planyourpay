@@ -1,5 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import {
     Check,
     MoreVertical,
@@ -255,7 +256,11 @@ export default function PayCyclesIndex({
     const markSaverPaid = (allocation: Allocation) => {
         router.post(
             `/pay-plans/${plan.id}/saver-transfers/${allocation.saverPlanId}`,
-            { amount: allocation.amount, status: 'paid', label: allocation.label },
+            {
+                amount: allocation.amount,
+                status: 'paid',
+                label: allocation.label,
+            },
             { preserveScroll: true },
         );
     };
@@ -316,7 +321,9 @@ export default function PayCyclesIndex({
             source: cover?.source ?? 'saver',
             amount: cover ? String(cover.amount) : '',
             saver_plan_id:
-                cover?.saverPlan?.id?.toString() ?? saverPlans[0]?.id?.toString() ?? '',
+                cover?.saverPlan?.id?.toString() ??
+                saverPlans[0]?.id?.toString() ??
+                '',
         });
         coverForm.clearErrors();
     };
@@ -330,6 +337,7 @@ export default function PayCyclesIndex({
 
     const submitCover = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+
         if (!coverTarget) {
             return;
         }
@@ -369,7 +377,11 @@ export default function PayCyclesIndex({
                     <span className="text-sm font-semibold text-muted-foreground tabular-nums">
                         {currency.format(total)}
                     </span>
-                    <Button variant="ghost" size="sm" onClick={() => openAdd(type)}>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openAdd(type)}
+                    >
                         <Plus className="h-4 w-4" />
                         Add
                     </Button>
@@ -392,16 +404,20 @@ export default function PayCyclesIndex({
     function renderRow(allocation: Allocation) {
         const paid = allocation.status === 'paid';
         const coverSummary = allocation.covers
-            ?.map((cover) =>
-                `${currency.format(cover.amount)} ` +
-                (cover.source === 'saver'
-                    ? `from ${cover.saverPlan?.name ?? 'Saver'}`
-                    : 'from pay cheque'),
+            ?.map(
+                (cover) =>
+                    `${currency.format(cover.amount)} ` +
+                    (cover.source === 'saver'
+                        ? `from ${cover.saverPlan?.name ?? 'Saver'}`
+                        : 'from pay cheque'),
             )
             .join(', ');
 
         return (
-            <li key={allocation.id} className="flex items-center gap-3 px-4 py-2.5">
+            <li
+                key={allocation.id}
+                className="flex items-center gap-3 px-4 py-2.5"
+            >
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <span
@@ -412,18 +428,28 @@ export default function PayCyclesIndex({
                         >
                             {allocation.label}
                         </span>
-                        {allocation.is_recurring && !allocation.is_saver_transfer && (
-                            <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[10px]">
-                                Recurring
-                            </Badge>
-                        )}
+                        {allocation.is_recurring &&
+                            !allocation.is_saver_transfer && (
+                                <Badge
+                                    variant="outline"
+                                    className="h-5 shrink-0 px-1.5 text-[10px]"
+                                >
+                                    Recurring
+                                </Badge>
+                            )}
                         {allocation.is_saver_transfer && (
-                            <Badge variant="secondary" className="h-5 shrink-0 px-1.5 text-[10px]">
+                            <Badge
+                                variant="secondary"
+                                className="h-5 shrink-0 px-1.5 text-[10px]"
+                            >
                                 Saver
                             </Badge>
                         )}
                         {paid && (
-                            <Badge variant="secondary" className="h-5 shrink-0 px-1.5 text-[10px]">
+                            <Badge
+                                variant="secondary"
+                                className="h-5 shrink-0 px-1.5 text-[10px]"
+                            >
                                 Paid
                             </Badge>
                         )}
@@ -462,7 +488,9 @@ export default function PayCyclesIndex({
                         <DropdownMenuContent align="end">
                             {allocation.materialized ? (
                                 <>
-                                    <DropdownMenuItem onSelect={() => togglePaid(allocation)}>
+                                    <DropdownMenuItem
+                                        onSelect={() => togglePaid(allocation)}
+                                    >
                                         {paid ? (
                                             <>
                                                 <RotateCcw className="h-4 w-4" />
@@ -475,7 +503,11 @@ export default function PayCyclesIndex({
                                             </>
                                         )}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => openSaverAmount(allocation)}>
+                                    <DropdownMenuItem
+                                        onSelect={() =>
+                                            openSaverAmount(allocation)
+                                        }
+                                    >
                                         <Pencil className="h-4 w-4" />
                                         Edit amount
                                     </DropdownMenuItem>
@@ -490,11 +522,19 @@ export default function PayCyclesIndex({
                                 </>
                             ) : (
                                 <>
-                                    <DropdownMenuItem onSelect={() => markSaverPaid(allocation)}>
+                                    <DropdownMenuItem
+                                        onSelect={() =>
+                                            markSaverPaid(allocation)
+                                        }
+                                    >
                                         <Check className="h-4 w-4" />
                                         Mark paid
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => openSaverAmount(allocation)}>
+                                    <DropdownMenuItem
+                                        onSelect={() =>
+                                            openSaverAmount(allocation)
+                                        }
+                                    >
                                         <Pencil className="h-4 w-4" />
                                         Set actual amount
                                     </DropdownMenuItem>
@@ -515,7 +555,9 @@ export default function PayCyclesIndex({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => togglePaid(allocation)}>
+                            <DropdownMenuItem
+                                onSelect={() => togglePaid(allocation)}
+                            >
                                 {paid ? (
                                     <>
                                         <RotateCcw className="h-4 w-4" />
@@ -528,12 +570,16 @@ export default function PayCyclesIndex({
                                     </>
                                 )}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => openEdit(allocation)}>
+                            <DropdownMenuItem
+                                onSelect={() => openEdit(allocation)}
+                            >
                                 <Pencil className="h-4 w-4" />
                                 Edit
                             </DropdownMenuItem>
                             {allocation.type === 'outflow' && (
-                                <DropdownMenuItem onSelect={() => openCoverDialog(allocation)}>
+                                <DropdownMenuItem
+                                    onSelect={() => openCoverDialog(allocation)}
+                                >
                                     <ShieldCheck className="h-4 w-4" />
                                     Cover amount
                                 </DropdownMenuItem>
@@ -580,8 +626,12 @@ export default function PayCyclesIndex({
                         </SelectTrigger>
                         <SelectContent>
                             {cycles.map((cycle) => (
-                                <SelectItem key={cycle.start} value={cycle.start}>
-                                    {formatDate(cycle.start)} – {formatDate(cycle.end)}
+                                <SelectItem
+                                    key={cycle.start}
+                                    value={cycle.start}
+                                >
+                                    {formatDate(cycle.start)} –{' '}
+                                    {formatDate(cycle.end)}
                                     {cycle.isCurrent ? ' · Current' : ''}
                                 </SelectItem>
                             ))}
@@ -592,10 +642,14 @@ export default function PayCyclesIndex({
 
             <div className="flex flex-wrap gap-2">
                 <Button variant="ghost" size="sm" asChild>
-                    <Link href={paySchedulesIndex().url}>Manage pay schedules</Link>
+                    <Link href={paySchedulesIndex().url}>
+                        Manage pay schedules
+                    </Link>
                 </Button>
                 <Button variant="ghost" size="sm" asChild>
-                    <Link href={commitmentsIndex().url}>Manage commitments</Link>
+                    <Link href={commitmentsIndex().url}>
+                        Manage commitments
+                    </Link>
                 </Button>
             </div>
 
@@ -606,11 +660,14 @@ export default function PayCyclesIndex({
                             {plan.scheduleName}
                         </span>
                         <span>
-                            {formatDate(plan.periodStart)} – {formatDate(plan.periodEnd)}
+                            {formatDate(plan.periodStart)} –{' '}
+                            {formatDate(plan.periodEnd)}
                         </span>
                     </div>
 
-                    <p className="mt-3 text-sm text-muted-foreground">Left to allocate</p>
+                    <p className="mt-3 text-sm text-muted-foreground">
+                        Left to allocate
+                    </p>
                     <p
                         className={cn(
                             'text-4xl font-semibold tracking-tight',
@@ -624,13 +681,17 @@ export default function PayCyclesIndex({
 
                     <div className="mt-4 grid grid-cols-2 gap-3">
                         <div className="rounded-lg bg-muted/50 px-3 py-2">
-                            <p className="text-xs text-muted-foreground">Money in</p>
+                            <p className="text-xs text-muted-foreground">
+                                Money in
+                            </p>
                             <p className="font-semibold tabular-nums">
                                 {currency.format(plan.inflowTotal)}
                             </p>
                         </div>
                         <div className="rounded-lg bg-muted/50 px-3 py-2">
-                            <p className="text-xs text-muted-foreground">Money out</p>
+                            <p className="text-xs text-muted-foreground">
+                                Money out
+                            </p>
                             <p className="font-semibold tabular-nums">
                                 {currency.format(plan.outflowTotal)}
                             </p>
@@ -639,7 +700,13 @@ export default function PayCyclesIndex({
                 </CardContent>
             </Card>
 
-            {section('Money in', 'inflow', inflows, plan.inflowTotal, 'No income added yet.')}
+            {section(
+                'Money in',
+                'inflow',
+                inflows,
+                plan.inflowTotal,
+                'No income added yet.',
+            )}
             {section(
                 'Money out',
                 'outflow',
@@ -648,7 +715,12 @@ export default function PayCyclesIndex({
                 'No commitments due this pay. Add a one-off below.',
             )}
 
-            <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
+            <Dialog
+                open={dialogOpen}
+                onOpenChange={(open) =>
+                    open ? setDialogOpen(true) : closeDialog()
+                }
+            >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>
@@ -687,7 +759,10 @@ export default function PayCyclesIndex({
                                     step="0.01"
                                     value={form.data.amount}
                                     onChange={(event) =>
-                                        form.setData('amount', event.target.value)
+                                        form.setData(
+                                            'amount',
+                                            event.target.value,
+                                        )
                                     }
                                     placeholder="0.00"
                                 />
@@ -709,7 +784,9 @@ export default function PayCyclesIndex({
                             </div>
                         </div>
                         <div className="space-y-1.5">
-                            <Label htmlFor="alloc-notes">Notes (optional)</Label>
+                            <Label htmlFor="alloc-notes">
+                                Notes (optional)
+                            </Label>
                             <Input
                                 id="alloc-notes"
                                 value={form.data.notes}
@@ -721,7 +798,11 @@ export default function PayCyclesIndex({
                         </div>
 
                         <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={closeDialog}>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={closeDialog}
+                            >
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={form.processing}>
@@ -749,7 +830,9 @@ export default function PayCyclesIndex({
 
                     <form onSubmit={submitSaverAmount} className="space-y-4">
                         <div className="space-y-1.5">
-                            <Label htmlFor="saver-amount">Amount this pay</Label>
+                            <Label htmlFor="saver-amount">
+                                Amount this pay
+                            </Label>
                             <Input
                                 id="saver-amount"
                                 type="number"
@@ -757,7 +840,10 @@ export default function PayCyclesIndex({
                                 step="0.01"
                                 value={saverForm.data.amount}
                                 onChange={(event) =>
-                                    saverForm.setData('amount', event.target.value)
+                                    saverForm.setData(
+                                        'amount',
+                                        event.target.value,
+                                    )
                                 }
                             />
                             <InputError message={saverForm.errors.amount} />
@@ -773,10 +859,17 @@ export default function PayCyclesIndex({
                         </label>
 
                         <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={closeSaverAmount}>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={closeSaverAmount}
+                            >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={saverForm.processing}>
+                            <Button
+                                type="submit"
+                                disabled={saverForm.processing}
+                            >
                                 Save
                             </Button>
                         </DialogFooter>
@@ -791,7 +884,9 @@ export default function PayCyclesIndex({
                 <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
                         <DialogTitle>
-                            {coverTarget ? `Cover ${coverTarget.label}` : 'Cover amount'}
+                            {coverTarget
+                                ? `Cover ${coverTarget.label}`
+                                : 'Cover amount'}
                         </DialogTitle>
                         <DialogDescription>
                             Track how this bill is funded across Savers or pay.
@@ -818,7 +913,12 @@ export default function PayCyclesIndex({
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => openCoverDialog(coverTarget, cover)}
+                                            onClick={() =>
+                                                openCoverDialog(
+                                                    coverTarget,
+                                                    cover,
+                                                )
+                                            }
                                             aria-label="Edit cover"
                                         >
                                             <Pencil className="h-4 w-4" />
@@ -844,16 +944,20 @@ export default function PayCyclesIndex({
                                 <Label>Source</Label>
                                 <Select
                                     value={coverForm.data.source}
-                                    onValueChange={(value: 'saver' | 'paycheck') =>
-                                        coverForm.setData('source', value)
-                                    }
+                                    onValueChange={(
+                                        value: 'saver' | 'paycheck',
+                                    ) => coverForm.setData('source', value)}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="saver">Saver</SelectItem>
-                                        <SelectItem value="paycheck">Pay cheque</SelectItem>
+                                        <SelectItem value="saver">
+                                            Saver
+                                        </SelectItem>
+                                        <SelectItem value="paycheck">
+                                            Pay cheque
+                                        </SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -866,7 +970,10 @@ export default function PayCyclesIndex({
                                     step="0.01"
                                     value={coverForm.data.amount}
                                     onChange={(event) =>
-                                        coverForm.setData('amount', event.target.value)
+                                        coverForm.setData(
+                                            'amount',
+                                            event.target.value,
+                                        )
                                     }
                                 />
                                 <InputError message={coverForm.errors.amount} />
@@ -879,7 +986,10 @@ export default function PayCyclesIndex({
                                 <Select
                                     value={coverForm.data.saver_plan_id}
                                     onValueChange={(value) =>
-                                        coverForm.setData('saver_plan_id', value)
+                                        coverForm.setData(
+                                            'saver_plan_id',
+                                            value,
+                                        )
                                     }
                                     disabled={saverPlans.length === 0}
                                 >
@@ -894,28 +1004,45 @@ export default function PayCyclesIndex({
                                     </SelectTrigger>
                                     <SelectContent>
                                         {saverPlans.map((plan) => (
-                                            <SelectItem key={plan.id} value={String(plan.id)}>
+                                            <SelectItem
+                                                key={plan.id}
+                                                value={String(plan.id)}
+                                            >
                                                 <div className="flex items-center justify-between gap-2">
                                                     <span>{plan.name}</span>
-                                                    {plan.balance !== undefined && plan.balance !== null && (
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {currency.format(plan.balance)}
-                                                        </span>
-                                                    )}
+                                                    {plan.balance !==
+                                                        undefined &&
+                                                        plan.balance !==
+                                                            null && (
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {currency.format(
+                                                                    plan.balance,
+                                                                )}
+                                                            </span>
+                                                        )}
                                                 </div>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <InputError message={coverForm.errors.saver_plan_id} />
+                                <InputError
+                                    message={coverForm.errors.saver_plan_id}
+                                />
                             </div>
                         )}
 
                         <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={closeCoverDialog}>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={closeCoverDialog}
+                            >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={coverForm.processing}>
+                            <Button
+                                type="submit"
+                                disabled={coverForm.processing}
+                            >
                                 {editingCover ? 'Save changes' : 'Add cover'}
                             </Button>
                         </DialogFooter>

@@ -3,10 +3,7 @@ import {
     ArrowUpRight,
     CalendarClock,
     CheckCircle2,
-    CreditCard,
     ListChecks,
-    PiggyBank,
-    Settings,
     Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,7 +54,7 @@ interface UpcomingItem {
     covers?: CoverSummary[];
 }
 
-interface DashboardProps {
+type DashboardProps = {
     income: number | null;
     committed: number;
     surplus: number | null;
@@ -66,7 +63,7 @@ interface DashboardProps {
     payPeriodEnd: string | null;
     commitments: UpcomingItem[];
     commitmentCount: number;
-}
+};
 
 export default function Dashboard() {
     const {
@@ -95,7 +92,9 @@ export default function Dashboard() {
                                     Let’s set up your plan
                                 </p>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    Add a pay schedule and your recurring commitments to see every pay cycle at a glance.
+                                    Add a pay schedule and your recurring
+                                    commitments to see every pay cycle at a
+                                    glance.
                                 </p>
                             </div>
                             <div className="mt-2 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -104,7 +103,11 @@ export default function Dashboard() {
                                         Add pay schedule
                                     </Link>
                                 </Button>
-                                <Button asChild variant="outline" className="w-full sm:w-auto">
+                                <Button
+                                    asChild
+                                    variant="outline"
+                                    className="w-full sm:w-auto"
+                                >
                                     <Link href={commitmentsIndex().url}>
                                         Add commitment
                                     </Link>
@@ -121,13 +124,11 @@ export default function Dashboard() {
         income && income > 0
             ? Math.min(100, Math.round((committed / income) * 100))
             : null;
-    const surplusPositive = (surplus ?? 0) >= 0;
     const periodLabel =
         payPeriodStart && payPeriodEnd
             ? `${formatDue(payPeriodStart)} – ${formatDue(payPeriodEnd)}`
             : null;
 
-    
     return (
         <>
             <Head title="Dashboard" />
@@ -160,7 +161,9 @@ export default function Dashboard() {
                                     />
                                 </div>
                                 <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span>{currency.format(committed)} committed</span>
+                                    <span>
+                                        {currency.format(committed)} committed
+                                    </span>
                                     <span>{currency.format(income!)} in</span>
                                 </div>
                             </div>
@@ -175,15 +178,16 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
 
-
-                
                 <Card className="gap-0 overflow-hidden py-0">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3">
                         <CardTitle className="flex items-center gap-2 text-base">
                             <CalendarClock className="h-4 w-4 text-muted-foreground" />
                             Upcoming
                         </CardTitle>
-                        <Link href={commitmentsIndex().url} className="text-sm font-medium text-primary">
+                        <Link
+                            href={commitmentsIndex().url}
+                            className="text-sm font-medium text-primary"
+                        >
                             See all
                         </Link>
                     </CardHeader>
@@ -191,13 +195,15 @@ export default function Dashboard() {
                         {commitments.length > 0 ? (
                             <ul className="divide-y divide-border border-t">
                                 {commitments.map((item) => {
-                                    const payAmount = item.pay_amount ?? item.amount;
+                                    const payAmount =
+                                        item.pay_amount ?? item.amount;
                                     const coverLabel = item.covers
-                                        ?.map((cover) =>
-                                            `${currency.format(cover.amount)} ` +
-                                            (cover.source === 'saver'
-                                                ? `from ${cover.saverPlan?.name ?? 'Saver'}`
-                                                : 'from pay cheque'),
+                                        ?.map(
+                                            (cover) =>
+                                                `${currency.format(cover.amount)} ` +
+                                                (cover.source === 'saver'
+                                                    ? `from ${cover.saverPlan?.name ?? 'Saver'}`
+                                                    : 'from pay cheque'),
                                         )
                                         .join(', ');
 
@@ -207,7 +213,9 @@ export default function Dashboard() {
                                             className="flex items-center justify-between gap-3 px-4 py-2.5"
                                         >
                                             <div className="min-w-0">
-                                                <p className="truncate font-medium">{item.name}</p>
+                                                <p className="truncate font-medium">
+                                                    {item.name}
+                                                </p>
                                                 <p className="text-xs text-muted-foreground">
                                                     {[
                                                         formatDue(item.due),
