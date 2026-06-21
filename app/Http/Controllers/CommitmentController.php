@@ -29,7 +29,7 @@ class CommitmentController extends Controller
             ])
             ->values();
 
-        return Inertia::render('commitments/index', [
+        return Inertia::render('settings/commitments/index', [
             'commitments' => $commitments,
         ]);
     }

@@ -24,14 +24,14 @@ class PayScheduleController extends Controller
 
         \Log::debug('pay-schedules.index', ['count' => $schedules->count()]);
 
-        return Inertia::render('pay-schedules/index', [
+        return Inertia::render('settings/pay-schedules/index', [
             'schedules' => $schedules,
         ]);
     }
 
     public function create(): Response
     {
-        return Inertia::render('pay-schedules/create', [
+        return Inertia::render('settings/pay-schedules/create', [
             'cadenceOptions' => $this->cadenceOptions,
         ]);
     }
@@ -48,7 +48,7 @@ class PayScheduleController extends Controller
 
     public function edit(PaySchedule $paySchedule): Response
     {
-        return Inertia::render('pay-schedules/edit', [
+        return Inertia::render('settings/pay-schedules/edit', [
             'schedule' => $this->present($paySchedule),
             'cadenceOptions' => $this->cadenceOptions,
         ]);

@@ -62,12 +62,27 @@ class PayCycleController extends Controller
         }
 
         $persisted = $plan->allocations()
+            ->with(['covers.saverPlan'])
             ->orderBy('type')
             ->orderBy('id')
             ->get();
 
         $allocations = $persisted->map(function ($a) use ($hasDate, $hasSaver) {
             $saverPlanId = $hasSaver ? $a->saver_plan_id : null;
+            $covers = $a->covers->map(function ($cover) {
+                return [
+                    'id' => $cover->id,
+                    'source' => $cover->source,
+                    'amount' => (float) $cover->amount,
+                    'saverPlan' => $cover->saverPlan?->only(['id', 'name']),
+                ];
+            });
+            $saverCoverage = (float) $a->covers
+                ->where('source', 'saver')
+                ->sum('amount');
+            $payPortion = $a->type === 'outflow'
+                ? max(0, (float) $a->amount - $saverCoverage)
+                : (float) $a->amount;
 
             return [
                 'id' => $a->id,
@@ -80,6 +95,8 @@ class PayCycleController extends Controller
                 'is_saver_transfer' => $saverPlanId !== null,
                 'materialized' => $saverPlanId !== null,
                 'saverPlanId' => $saverPlanId,
+                'covers' => $covers,
+                'payPortion' => $payPortion,
             ];
         });
 
@@ -91,8 +108,10 @@ class PayCycleController extends Controller
         $saverTransfers = $this->saverTransfers($request->user(), $start, $materialised);
         $allocations = $allocations->concat($saverTransfers);
 
-        $inflow = (float) $allocations->where('type', 'inflow')->sum('amount');
-        $outflow = (float) $allocations->where('type', 'outflow')->sum('amount');
+        $inflow = (float) $allocations->where('type', 'inflow')->sum(fn ($a) => $a['payPortion']);
+        $outflow = (float) $allocations->where('type', 'outflow')->sum(fn ($a) => $a['payPortion']);
+
+                $saverPlans = $this->saverPlanOptions($request->user());
 
         return Inertia::render('pay-cycles/index', [
             'hasPrimarySchedule' => true,
@@ -107,6 +126,7 @@ class PayCycleController extends Controller
                 'remaining' => $inflow - $outflow,
                 'allocations' => $allocations->values(),
             ],
+            'saverPlans' => $saverPlans,
         ]);
     }
 
@@ -157,6 +177,8 @@ class PayCycleController extends Controller
             'is_saver_transfer' => true,
             'materialized' => false,
             'saverPlanId' => $p->id,
+            'covers' => [],
+            'payPortion' => (float) $p->contribution_amount,
         ];
     }
 
@@ -351,4 +373,51 @@ class PayCycleController extends Controller
 
         return $date->lt($end) ? $date : null;
     }
+
+    protected function saverPlanOptions(User $user): Collection
+    {
+        if (! Schema::hasTable('saver_plans')) {
+            return collect();
+        }
+
+        $plans = SaverPlan::where('user_id', $user->id)->get();
+        $up = UpBankService::forUser($user);
+        $remote = collect();
+
+        if ($up->isConfigured()) {
+            try {
+                $remote = collect($up->savers())->keyBy('id');
+            } catch (\Throwable $e) {
+                $remote = collect();
+            }
+        }
+
+        $plans->each(function (SaverPlan $plan) use ($remote) {
+            if ($remote->has($plan->up_account_id)) {
+                $plan->name = $plan->name ?? $remote[$plan->up_account_id]['name'];
+                $plan->save();
+            }
+        });
+
+        // Ensure every Up saver has a matching plan row for referencing covers.
+        $remote->each(function ($saver) use ($user) {
+            SaverPlan::firstOrCreate(
+                ['user_id' => $user->id, 'up_account_id' => $saver['id']],
+                ['name' => $saver['name']],
+            );
+        });
+
+        $plans = SaverPlan::where('user_id', $user->id)->get();
+
+        return $plans->map(function (SaverPlan $plan) use ($remote) {
+            $remoteSaver = $remote[$plan->up_account_id] ?? null;
+
+            return [
+                'id' => $plan->id,
+                'name' => $plan->name ?? $remoteSaver['name'] ?? 'Saver',
+                'balance' => $remoteSaver['balance'] ?? null,
+            ];
+        });
+    }
+
 }

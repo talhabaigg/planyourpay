@@ -1,14 +1,6 @@
-import {
-    LayoutGrid,
-    CalendarRange,
-    RefreshCw,
-    ListChecks,
-    PiggyBank,
-} from 'lucide-react';
+import { LayoutGrid, RefreshCw, PiggyBank } from 'lucide-react';
 import { dashboard } from '@/routes';
-import { index as paySchedulesIndex } from '@/routes/pay-schedules';
 import { index as payCyclesIndex } from '@/routes/pay-cycles';
-import { index as commitmentsIndex } from '@/routes/commitments';
 import type { NavItem } from '@/types/navigation';
 
 /**
@@ -22,19 +14,9 @@ export const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Pay schedules',
-        href: paySchedulesIndex(),
-        icon: CalendarRange,
-    },
-    {
         title: 'Pay cycles',
         href: payCyclesIndex(),
         icon: RefreshCw,
-    },
-    {
-        title: 'Commitments',
-        href: commitmentsIndex(),
-        icon: ListChecks,
     },
     {
         title: 'Savers',

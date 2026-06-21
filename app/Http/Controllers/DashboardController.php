@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Commitment;
+use App\Models\PayPlan;
 use App\Models\PaySchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -29,35 +30,74 @@ class DashboardController extends Controller
         $income = $primary ? (float) $primary->amount : null;
         $today = Carbon::today();
         $period = $this->currentPayPeriod($primary);
+        $plan = null;
 
-        if ($period['start'] && $period['end']) {
+        if ($period['start']) {
+            $plan = PayPlan::query()
+                ->with(['allocations.covers.saverPlan'])
+                ->whereDate('period_start_date', $period['start'])
+                ->first();
+        }
+
+        if ($plan) {
             // Scope to the current pay cycle: a commitment belongs to this pay
             // if it comes due before the next paycheck. "Committed" reflects the
             // whole cycle's obligations; the list shows only what's still pending
             // (due on or after today) so it reads as genuinely upcoming.
-            $start = Carbon::parse($period['start']);
-            $end = Carbon::parse($period['end']);
+            $allocations = $plan->allocations;
+            $inflowTotal = (float) $allocations
+                ->where('type', 'inflow')
+                ->sum('amount');
+            $committed = (float) $allocations
+                ->where('type', 'outflow')
+                ->sum(function ($allocation) {
+                    $saverCoverage = (float) $allocation->covers
+                        ->where('source', 'saver')
+                        ->sum('amount');
 
-            $inCycle = $commitments
-                ->map(function (Commitment $c) use ($start, $end) {
-                    $due = $this->occurrenceInWindow($c, $start, $end);
+                    return max(0, (float) $allocation->amount - $saverCoverage);
+                });
+            $income = $inflowTotal > 0 ? $inflowTotal : $income;
 
-                    return $due === null ? null : [
-                        'id' => $c->id,
-                        'name' => $c->name,
-                        'amount' => (float) $c->amount,
-                        'category' => $c->category,
+            $upcoming = $allocations
+                ->where('type', 'outflow')
+                ->filter(fn ($allocation) => $allocation->status !== 'paid')
+                ->map(function ($allocation) use ($period) {
+                    $saverCoverage = (float) $allocation->covers
+                        ->where('source', 'saver')
+                        ->sum('amount');
+                    $due = $allocation->date
+                        ? Carbon::parse($allocation->date)
+                        : ($period['end'] ? Carbon::parse($period['end']) : null);
+
+                    return [
+                        'id' => $allocation->id,
+                        'name' => $allocation->label,
+                        'amount' => (float) $allocation->amount,
+                        'pay_amount' => max(0, (float) $allocation->amount - $saverCoverage),
+                        'covers' => $allocation->covers->map(function ($cover) {
+                            return [
+                                'id' => $cover->id,
+                                'source' => $cover->source,
+                                'amount' => (float) $cover->amount,
+                                'saverPlan' => $cover->saverPlan?->only(['id', 'name']),
+                            ];
+                        }),
+                        'category' => $allocation->is_recurring ? 'Recurring' : null,
                         'due' => $due,
                     ];
                 })
-                ->filter()
-                ->values();
-
-            $committed = (float) $inCycle->sum('amount');
-            $upcoming = $inCycle
-                ->filter(fn ($item) => $item['due']->gte($today))
-                ->sortBy(fn ($item) => $item['due']->timestamp)
-                ->map(fn ($item) => [...$item, 'due' => $item['due']->toDateString()])
+                ->filter(fn ($item) => $item['due']?->gte($today))
+                ->sortBy(fn ($item) => $item['due']?->timestamp ?? PHP_INT_MAX)
+                ->map(fn ($item) => [
+                    'id' => $item['id'],
+                    'name' => $item['name'],
+                    'amount' => $item['amount'],
+                    'pay_amount' => $item['pay_amount'],
+                    'covers' => $item['covers'],
+                    'category' => $item['category'],
+                    'due' => $item['due']?->toDateString(),
+                ])
                 ->take(5)
                 ->values();
         } else {
@@ -72,6 +112,8 @@ class DashboardController extends Controller
                         'id' => $c->id,
                         'name' => $c->name,
                         'amount' => (float) $c->amount,
+                        'pay_amount' => (float) $c->amount,
+                        'covers' => [],
                         'category' => $c->category,
                         'due' => $due->toDateString(),
                     ];
@@ -82,10 +124,14 @@ class DashboardController extends Controller
                 ->values();
         }
 
+        $surplus = $income !== null && isset($committed)
+            ? $income - $committed
+            : ($income !== null ? $income : null);
+
         return Inertia::render('dashboard', [
             'income' => $income,
-            'committed' => $committed,
-            'surplus' => $income !== null ? $income - $committed : null,
+            'committed' => $committed ?? 0,
+            'surplus' => $surplus,
             'primaryName' => $primary?->name,
             'payPeriodStart' => $period['start'],
             'payPeriodEnd' => $period['end'],
